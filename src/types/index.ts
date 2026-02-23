@@ -30,12 +30,12 @@ export interface ProctorPayload {
     puntos: ProctorPunto[]
 
     tipo_muestra?: string | null
-    condicion_muestra?: string | null
+    condicion_muestra?: "-" | "ALTERADO" | "INTACTA" | null
     tamano_maximo_particula_in?: string | null
     forma_particula?: string | null
     clasificacion_sucs_visual?: string | null
 
-    metodo_ensayo: "-" | "A" | "B"
+    metodo_ensayo: "-" | "A" | "B" | "C"
     metodo_preparacion: "-" | "HUMEDO" | "SECO"
     tipo_apisonador: "-" | "MANUAL" | "MECANICO"
     contenido_humedad_natural_pct?: number | null

@@ -11,11 +11,20 @@ import type { ProctorPayload, ProctorEnsayoDetail, ProctorPunto } from '@/types'
 
 const POINT_COLUMNS = ['Punto 1', 'Punto 2', 'Punto 3', 'Punto 4', 'Punto 5']
 const SIEVE_LABELS = ['19 mm (3/4 in)', '9.5 mm (3/8 in)', '4.75 mm (No. 4)', 'Menor (No. 4)', 'Total']
+const FIXED_NUMERO_CAPAS = 5
 
-const METODO_ENSAYO_OPTIONS: Array<'-' | 'A' | 'B'> = ['-', 'A', 'B']
+const CONDICION_MUESTRA_OPTIONS: Array<'-' | 'ALTERADO' | 'INTACTA'> = ['-', 'ALTERADO', 'INTACTA']
+const METODO_ENSAYO_OPTIONS: Array<'-' | 'A' | 'B' | 'C'> = ['-', 'A', 'B', 'C']
 const METODO_PREPARACION_OPTIONS: Array<'-' | 'HUMEDO' | 'SECO'> = ['-', 'HUMEDO', 'SECO']
 const APISONADOR_OPTIONS: Array<'-' | 'MANUAL' | 'MECANICO'> = ['-', 'MANUAL', 'MECANICO']
 const SI_NO_OPTIONS: Array<'-' | 'SI' | 'NO'> = ['-', 'SI', 'NO']
+const GOLPES_OPTIONS: Array<'-' | '25' | '56'> = ['-', '25', '56']
+const TAMIZ_METODO_OPTIONS = ['-', 'INS-0050 (3/4in)', 'INS-0053 (No 4)', 'INS-0052 (3/8in)'] as const
+const BALANZA_1G_OPTIONS = ['-', 'EQP-0054'] as const
+const BALANZA_01G_OPTIONS = ['-', 'EQP-0046'] as const
+const HORNO_110_OPTIONS = ['-', 'EQP-0049'] as const
+const MOLDE_OPTIONS = ['-', 'INS-0195 (MOLDE 6in)', 'INS-0114 (MOLDE 4in)'] as const
+const PISON_OPTIONS = ['-', 'INS-0196'] as const
 
 const REVISADO_POR_OPTIONS = ['-', 'FABIAN LA ROSA']
 const APROBADO_POR_OPTIONS = ['-', 'IRMA COAQUIRA']
@@ -102,9 +111,14 @@ const toOptionalNumber = (value: unknown): number | null => {
     return Number.isFinite(parsed) ? parsed : null
 }
 
+const normalizeNumeroGolpes = (value: unknown): number | null => {
+    const parsed = toOptionalNumber(value)
+    return parsed === 25 || parsed === 56 ? parsed : null
+}
+
 const emptyPoint = (index: number): ProctorPunto => ({
     prueba_numero: index + 1,
-    numero_capas: null,
+    numero_capas: FIXED_NUMERO_CAPAS,
     numero_golpes: null,
     masa_suelo_humedo_molde_a: null,
     masa_molde_compactacion_b: null,
@@ -132,7 +146,7 @@ const buildInitialState = (): ProctorPayload => ({
     realizado_por: '',
     puntos: Array.from({ length: 5 }, (_, idx) => emptyPoint(idx)),
     tipo_muestra: '',
-    condicion_muestra: '',
+    condicion_muestra: '-',
     tamano_maximo_particula_in: '',
     forma_particula: '',
     clasificacion_sucs_visual: '',
@@ -165,9 +179,9 @@ const normalizePoint = (value: ProctorPunto | undefined, index: number): Proctor
     const merged = { ...emptyPoint(index), ...(value || {}) }
     return {
         ...merged,
-        prueba_numero: toOptionalNumber(merged.prueba_numero) ?? index + 1,
-        numero_capas: toOptionalNumber(merged.numero_capas),
-        numero_golpes: toOptionalNumber(merged.numero_golpes),
+        prueba_numero: index + 1,
+        numero_capas: FIXED_NUMERO_CAPAS,
+        numero_golpes: normalizeNumeroGolpes(merged.numero_golpes),
         masa_suelo_humedo_molde_a: toOptionalNumber(merged.masa_suelo_humedo_molde_a),
         masa_molde_compactacion_b: toOptionalNumber(merged.masa_molde_compactacion_b),
         masa_suelo_compactado_c: toOptionalNumber(merged.masa_suelo_compactado_c),
@@ -199,17 +213,18 @@ const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPay
         tamiz_masa_retenida_g: normalizeNumberArray(merged.tamiz_masa_retenida_g, 5),
         tamiz_porcentaje_retenido: normalizeNumberArray(merged.tamiz_porcentaje_retenido, 5),
         tamiz_porcentaje_retenido_acumulado: normalizeNumberArray(merged.tamiz_porcentaje_retenido_acumulado, 5),
+        condicion_muestra: normalizeSelect(merged.condicion_muestra, CONDICION_MUESTRA_OPTIONS, '-'),
         metodo_ensayo: normalizeSelect(merged.metodo_ensayo, METODO_ENSAYO_OPTIONS, '-'),
         metodo_preparacion: normalizeSelect(merged.metodo_preparacion, METODO_PREPARACION_OPTIONS, '-'),
         tipo_apisonador: normalizeSelect(merged.tipo_apisonador, APISONADOR_OPTIONS, '-'),
         excluyo_material_muestra: normalizeSelect(merged.excluyo_material_muestra, SI_NO_OPTIONS, '-'),
         contenido_humedad_natural_pct: toOptionalNumber(merged.contenido_humedad_natural_pct),
-        tamiz_utilizado_metodo_codigo: merged.tamiz_utilizado_metodo_codigo || '-',
-        balanza_1g_codigo: merged.balanza_1g_codigo || '-',
-        balanza_codigo: merged.balanza_codigo || '-',
-        horno_110_codigo: merged.horno_110_codigo || '-',
-        molde_codigo: merged.molde_codigo || '-',
-        pison_codigo: merged.pison_codigo || '-',
+        tamiz_utilizado_metodo_codigo: normalizeSelect(merged.tamiz_utilizado_metodo_codigo, TAMIZ_METODO_OPTIONS, '-'),
+        balanza_1g_codigo: normalizeSelect(merged.balanza_1g_codigo, BALANZA_1G_OPTIONS, '-'),
+        balanza_codigo: normalizeSelect(merged.balanza_codigo, BALANZA_01G_OPTIONS, '-'),
+        horno_110_codigo: normalizeSelect(merged.horno_110_codigo, HORNO_110_OPTIONS, '-'),
+        molde_codigo: normalizeSelect(merged.molde_codigo, MOLDE_OPTIONS, '-'),
+        pison_codigo: normalizeSelect(merged.pison_codigo, PISON_OPTIONS, '-'),
     }
 }
 
@@ -406,6 +421,17 @@ export default function ProctorForm() {
         })
     }, [])
 
+    const setPointGolpes = useCallback((index: number, raw: string) => {
+        const nextValue = raw === '-' ? null : Number(raw)
+        setForm(prev => {
+            const next = [...prev.puntos]
+            const row = { ...next[index] }
+            row.numero_golpes = nextValue === 25 || nextValue === 56 ? nextValue : null
+            next[index] = row
+            return { ...prev, puntos: next }
+        })
+    }, [])
+
     const setPointText = useCallback((index: number, key: 'tara_numero', raw: string) => {
         setForm(prev => {
             const next = [...prev.puntos]
@@ -462,6 +488,7 @@ export default function ProctorForm() {
         const descripcionReady = Boolean(
             (form.tipo_muestra || '').trim() &&
             (form.condicion_muestra || '').trim() &&
+            form.condicion_muestra !== '-' &&
             (form.tamano_maximo_particula_in || '').trim() &&
             (form.forma_particula || '').trim() &&
             (form.clasificacion_sucs_visual || '').trim(),
@@ -646,7 +673,9 @@ export default function ProctorForm() {
     const buildPayload = useCallback((): ProctorPayload => {
         const mergedPoints = form.puntos.map((point, idx) => ({
             ...point,
-            prueba_numero: point.prueba_numero ?? idx + 1,
+            prueba_numero: idx + 1,
+            numero_capas: FIXED_NUMERO_CAPAS,
+            numero_golpes: normalizeNumeroGolpes(point.numero_golpes),
             ...computedPoints[idx],
         }))
 
@@ -791,9 +820,9 @@ export default function ProctorForm() {
                                 </tr>
                             </thead>
                             <tbody>
-                                <TableRowNumber label="Prueba N" unit="--" values={form.puntos.map(point => point.prueba_numero)} onChange={(idx, raw) => setPointNumber(idx, 'prueba_numero', raw)} />
-                                <TableRowNumber label="Numero de capas" unit="--" values={form.puntos.map(point => point.numero_capas)} onChange={(idx, raw) => setPointNumber(idx, 'numero_capas', raw)} />
-                                <TableRowNumber label="Numero de golpes" unit="--" values={form.puntos.map(point => point.numero_golpes)} onChange={(idx, raw) => setPointNumber(idx, 'numero_golpes', raw)} />
+                                <TableRowStatic label="Prueba N" unit="--" values={POINT_COLUMNS.map((_, idx) => idx + 1)} />
+                                <TableRowStatic label="Numero de capas" unit="--" values={POINT_COLUMNS.map(() => FIXED_NUMERO_CAPAS)} />
+                                <TableRowSelectNumber label="Numero de golpes" unit="--" values={form.puntos.map(point => point.numero_golpes)} options={GOLPES_OPTIONS} onChange={setPointGolpes} />
                                 <TableRowNumber label="Masa de suelo humedo y molde (A)" unit="g" values={form.puntos.map(point => point.masa_suelo_humedo_molde_a)} onChange={(idx, raw) => setPointNumber(idx, 'masa_suelo_humedo_molde_a', raw)} />
                                 <TableRowNumber label="Masa del molde compactacion (B)" unit="g" values={form.puntos.map(point => point.masa_molde_compactacion_b)} onChange={(idx, raw) => setPointNumber(idx, 'masa_molde_compactacion_b', raw)} />
                                 <TableRowComputed label="Masa suelo compactado (C=A-B)" unit="g" values={computedPoints.map(point => point.masa_suelo_compactado_c)} />
@@ -839,7 +868,7 @@ export default function ProctorForm() {
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div className="space-y-3">
                             <Input label="Tipo de muestra" value={form.tipo_muestra || ''} onChange={v => set('tipo_muestra', v)} />
-                            <Input label="Condicion de la muestra" value={form.condicion_muestra || ''} onChange={v => set('condicion_muestra', v)} />
+                            <SelectField label="Condicion de la muestra" value={form.condicion_muestra || '-'} options={CONDICION_MUESTRA_OPTIONS} onChange={v => set('condicion_muestra', v as ProctorPayload['condicion_muestra'])} />
                             <Input label="Tamano maximo de la particula (in)" value={form.tamano_maximo_particula_in || ''} onChange={v => set('tamano_maximo_particula_in', v)} />
                             <Input label="Forma de la particula" value={form.forma_particula || ''} onChange={v => set('forma_particula', v)} />
                             <Input label="Clasificacion SUCS o visual" value={form.clasificacion_sucs_visual || ''} onChange={v => set('clasificacion_sucs_visual', v)} />
@@ -880,12 +909,12 @@ export default function ProctorForm() {
 
                 <Section title="Equipo utilizado y codigos">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        <Input label="Tamiz utilizado metodo (codigo)" value={form.tamiz_utilizado_metodo_codigo || '-'} onChange={v => set('tamiz_utilizado_metodo_codigo', v)} />
-                        <Input label="Balanza 1 g (codigo)" value={form.balanza_1g_codigo || '-'} onChange={v => set('balanza_1g_codigo', v)} />
-                        <Input label="Balanza (codigo)" value={form.balanza_codigo || '-'} onChange={v => set('balanza_codigo', v)} />
-                        <Input label="Horno 110 C (codigo)" value={form.horno_110_codigo || '-'} onChange={v => set('horno_110_codigo', v)} />
-                        <Input label="Molde (codigo)" value={form.molde_codigo || '-'} onChange={v => set('molde_codigo', v)} />
-                        <Input label="Pison (codigo)" value={form.pison_codigo || '-'} onChange={v => set('pison_codigo', v)} />
+                        <SelectField label="Tamiz utilizado metodo (codigo)" value={form.tamiz_utilizado_metodo_codigo || '-'} options={TAMIZ_METODO_OPTIONS} onChange={v => set('tamiz_utilizado_metodo_codigo', v)} />
+                        <SelectField label="Balanza 1 g (codigo)" value={form.balanza_1g_codigo || '-'} options={BALANZA_1G_OPTIONS} onChange={v => set('balanza_1g_codigo', v)} />
+                        <SelectField label="Balanza 0,1 g (codigo)" value={form.balanza_codigo || '-'} options={BALANZA_01G_OPTIONS} onChange={v => set('balanza_codigo', v)} />
+                        <SelectField label="Horno 110 C (codigo)" value={form.horno_110_codigo || '-'} options={HORNO_110_OPTIONS} onChange={v => set('horno_110_codigo', v)} />
+                        <SelectField label="Molde (codigo)" value={form.molde_codigo || '-'} options={MOLDE_OPTIONS} onChange={v => set('molde_codigo', v)} />
+                        <SelectField label="Pison (codigo)" value={form.pison_codigo || '-'} options={PISON_OPTIONS} onChange={v => set('pison_codigo', v)} />
                     </div>
                 </Section>
 
@@ -1272,6 +1301,16 @@ function TableComputedValue({ value, highlight = false }: {
     )
 }
 
+function TableStaticValue({ value }: {
+    value: string | number
+}) {
+    return (
+        <div className="h-8 px-2 rounded-md border border-input bg-muted/30 text-sm text-foreground flex items-center justify-center">
+            {value}
+        </div>
+    )
+}
+
 function TableRowNumber({
     label,
     unit,
@@ -1290,6 +1329,80 @@ function TableRowNumber({
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableNumInput value={value} onChange={raw => onChange(idx, raw)} />
+                </td>
+            ))}
+        </tr>
+    )
+}
+
+function TableRowStatic({
+    label,
+    unit,
+    values,
+}: {
+    label: string
+    unit: string
+    values: Array<string | number>
+}) {
+    return (
+        <tr>
+            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
+            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            {values.map((value, idx) => (
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
+                    <TableStaticValue value={value} />
+                </td>
+            ))}
+        </tr>
+    )
+}
+
+function TableSelectInput({
+    value,
+    options,
+    onChange,
+}: {
+    value: number | null | undefined
+    options: readonly string[]
+    onChange: (raw: string) => void
+}) {
+    const currentValue = value == null ? '-' : String(value)
+    return (
+        <div className="relative">
+            <select
+                value={currentValue}
+                onChange={e => onChange(e.target.value)}
+                className="w-full h-8 pl-2 pr-7 rounded-md border border-input bg-background text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+                {options.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                ))}
+            </select>
+            <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        </div>
+    )
+}
+
+function TableRowSelectNumber({
+    label,
+    unit,
+    values,
+    options,
+    onChange,
+}: {
+    label: string
+    unit: string
+    values: Array<number | null | undefined>
+    options: readonly string[]
+    onChange: (index: number, raw: string) => void
+}) {
+    return (
+        <tr>
+            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
+            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            {values.map((value, idx) => (
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
+                    <TableSelectInput value={value} options={options} onChange={raw => onChange(idx, raw)} />
                 </td>
             ))}
         </tr>
