@@ -373,6 +373,96 @@ export default function ProctorForm() {
 
     const sievePreview = useMemo(() => computeSievePreview(form), [form])
 
+    const progressSummary = useMemo(() => {
+        const headerReady = Boolean(
+            form.muestra.trim() &&
+            form.numero_ot.trim() &&
+            form.fecha_ensayo.trim() &&
+            form.realizado_por.trim(),
+        )
+
+        const descripcionReady = Boolean(
+            (form.tipo_muestra || '').trim() &&
+            (form.condicion_muestra || '').trim() &&
+            (form.tamano_maximo_particula_in || '').trim() &&
+            (form.forma_particula || '').trim() &&
+            (form.clasificacion_sucs_visual || '').trim(),
+        )
+
+        const condicionesReady = Boolean(
+            form.metodo_ensayo !== '-' &&
+            form.metodo_preparacion !== '-' &&
+            form.tipo_apisonador !== '-' &&
+            form.excluyo_material_muestra !== '-' &&
+            form.contenido_humedad_natural_pct != null,
+        )
+
+        const puntosCompletos = computedPoints.filter((point, idx) => {
+            const row = form.puntos[idx]
+            return Boolean(
+                row.numero_capas != null &&
+                row.numero_golpes != null &&
+                row.masa_suelo_humedo_molde_a != null &&
+                row.masa_molde_compactacion_b != null &&
+                row.volumen_molde_compactacion_d != null &&
+                (row.tara_numero || '').trim() &&
+                row.masa_recipiente_suelo_humedo_e != null &&
+                row.masa_recipiente_suelo_seco_3_f != null &&
+                row.masa_recipiente_g != null &&
+                point.contenido_humedad_moldeo_w != null &&
+                point.densidad_seca != null
+            )
+        }).length
+
+        const tamicesReady = sievePreview.mass.slice(0, 4).every((v) => v != null)
+        const equiposReady = Boolean(
+            [form.tamiz_utilizado_metodo_codigo, form.balanza_1g_codigo, form.balanza_codigo, form.horno_110_codigo, form.molde_codigo, form.pison_codigo]
+                .every((v) => (v || '').trim() && v !== '-'),
+        )
+
+        const firmasReady = Boolean(
+            (form.revisado_por || '-') !== '-' &&
+            (form.aprobado_por || '-') !== '-' &&
+            (form.revisado_fecha || '').trim() &&
+            (form.aprobado_fecha || '').trim(),
+        )
+
+        const sections = [
+            { label: 'Encabezado', ready: headerReady },
+            { label: 'Descripcion', ready: descripcionReady },
+            { label: 'Condiciones', ready: condicionesReady },
+            { label: 'Puntos completos', ready: puntosCompletos >= 4, detail: `${puntosCompletos}/5` },
+            { label: 'Tamices', ready: tamicesReady },
+            { label: 'Equipos', ready: equiposReady },
+            { label: 'Firmas', ready: firmasReady },
+        ]
+
+        const readyCount = sections.filter((item) => item.ready).length
+        const completion = Math.round((readyCount / sections.length) * 100)
+
+        return {
+            sections,
+            completion,
+        }
+    }, [computedPoints, form, sievePreview])
+
+    const pointTablePreview = useMemo(() => {
+        return POINT_COLUMNS.map((label, idx) => ({
+            label,
+            humedad: computedPoints[idx]?.contenido_humedad_moldeo_w,
+            densidad: computedPoints[idx]?.densidad_seca,
+        }))
+    }, [computedPoints])
+
+    const sieveTablePreview = useMemo(() => {
+        return SIEVE_LABELS.map((label, idx) => ({
+            label,
+            masa: sievePreview.mass[idx],
+            pct: sievePreview.pct[idx],
+            acc: sievePreview.acc[idx],
+        }))
+    }, [sievePreview])
+
     useEffect(() => {
         if (!editingEnsayoId) return
 
@@ -492,7 +582,7 @@ export default function ProctorForm() {
     }, [buildPayload, closeParentModalIfEmbedded, downloadBlob, editingEnsayoId, form.muestra, form.numero_ot, form.realizado_por])
 
     return (
-        <div className="max-w-[1400px] mx-auto p-4 md:p-6">
+        <div className="max-w-[1780px] mx-auto p-4 md:p-6">
             <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 rounded-lg bg-primary/10">
                     <Beaker className="h-6 w-6 text-primary" />
@@ -508,14 +598,16 @@ export default function ProctorForm() {
                 </div>
             </div>
 
-            {loadingEnsayo && (
-                <div className="mb-4 h-10 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Cargando datos guardados para edicion...
-                </div>
-            )}
+            <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-5">
+                <div>
+                    {loadingEnsayo && (
+                        <div className="mb-4 h-10 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Cargando datos guardados para edicion...
+                        </div>
+                    )}
 
-            <div className="space-y-5">
+                    <div className="space-y-5">
                 <Section title="Encabezado" icon={<FlaskConical className="h-4 w-4" />}>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <Input label="Muestra *" value={form.muestra} onChange={v => set('muestra', v)} onBlur={() => applyFormattedField('muestra', normalizeMuestraCode)} placeholder="123-SU-26" />
@@ -663,8 +755,151 @@ export default function ProctorForm() {
                         {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Procesando...</> : <><Download className="h-4 w-4" /> Guardar y Descargar</>}
                     </button>
                 </div>
+                    </div>
+                </div>
+                <SideProgressPanel
+                    form={form}
+                    progressSummary={progressSummary}
+                    pointTablePreview={pointTablePreview}
+                    sieveTablePreview={sieveTablePreview}
+                    densidadSecaMaxima={densidadSecaMaxima}
+                />
             </div>
         </div>
+    )
+}
+
+interface ProgressSection {
+    label: string
+    ready: boolean
+    detail?: string
+}
+
+interface ProgressSummary {
+    completion: number
+    sections: ProgressSection[]
+}
+
+interface SideProgressPanelProps {
+    form: ProctorPayload
+    progressSummary: ProgressSummary
+    pointTablePreview: Array<{
+        label: string
+        humedad: number | null | undefined
+        densidad: number | null | undefined
+    }>
+    sieveTablePreview: Array<{
+        label: string
+        masa: number | null | undefined
+        pct: number | null | undefined
+        acc: number | null | undefined
+    }>
+    densidadSecaMaxima: number | null
+}
+
+function SideProgressPanel({
+    form,
+    progressSummary,
+    pointTablePreview,
+    sieveTablePreview,
+    densidadSecaMaxima,
+}: SideProgressPanelProps) {
+    return (
+        <aside className="hidden xl:block">
+            <div className="sticky top-4 space-y-4">
+                <div className="bg-card border border-border rounded-lg shadow-sm">
+                    <div className="px-4 py-3 border-b border-border bg-muted/50 rounded-t-lg">
+                        <h3 className="text-sm font-semibold text-foreground">Formulario / Tabla de informacion</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">Seguimiento en vivo del ensayo</p>
+                    </div>
+                    <div className="p-4 space-y-4">
+                        <div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                                <span>Avance general</span>
+                                <span className="font-semibold text-foreground">{progressSummary.completion}%</span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-primary transition-all"
+                                    style={{ width: `${progressSummary.completion}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-md border border-border">
+                            <table className="w-full text-xs">
+                                <tbody>
+                                    {progressSummary.sections.map((section) => (
+                                        <tr key={section.label} className="border-b border-border last:border-b-0">
+                                            <td className="px-3 py-2 text-muted-foreground">{section.label}</td>
+                                            <td className="px-3 py-2 text-right">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${section.ready ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                                    {section.ready ? 'OK' : 'Pend.'}
+                                                </span>
+                                                {section.detail ? (
+                                                    <span className="ml-2 text-muted-foreground">{section.detail}</span>
+                                                ) : null}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="overflow-hidden rounded-md border border-border">
+                            <table className="w-full text-xs">
+                                <thead className="bg-muted/40 text-muted-foreground">
+                                    <tr>
+                                        <th className="px-2 py-2 text-left">Punto</th>
+                                        <th className="px-2 py-2 text-center">W (%)</th>
+                                        <th className="px-2 py-2 text-center">Dens. seca</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pointTablePreview.map((row) => (
+                                        <tr key={row.label} className="border-t border-border">
+                                            <td className="px-2 py-2">{row.label}</td>
+                                            <td className="px-2 py-2 text-center">{row.humedad ?? '-'}</td>
+                                            <td className="px-2 py-2 text-center">{row.densidad ?? '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="overflow-hidden rounded-md border border-border">
+                            <table className="w-full text-xs">
+                                <thead className="bg-muted/40 text-muted-foreground">
+                                    <tr>
+                                        <th className="px-2 py-2 text-left">Tamiz</th>
+                                        <th className="px-2 py-2 text-center">g</th>
+                                        <th className="px-2 py-2 text-center">%</th>
+                                        <th className="px-2 py-2 text-center">Acum.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sieveTablePreview.map((row) => (
+                                        <tr key={row.label} className="border-t border-border">
+                                            <td className="px-2 py-2">{row.label}</td>
+                                            <td className="px-2 py-2 text-center">{row.masa ?? '-'}</td>
+                                            <td className="px-2 py-2 text-center">{row.pct ?? '-'}</td>
+                                            <td className="px-2 py-2 text-center">{row.acc ?? '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground border border-border rounded-md p-3 bg-muted/20 space-y-1">
+                            <p><span className="font-medium text-foreground">Muestra:</span> {form.muestra || '-'}</p>
+                            <p><span className="font-medium text-foreground">N OT:</span> {form.numero_ot || '-'}</p>
+                            <p><span className="font-medium text-foreground">Realizado:</span> {form.realizado_por || '-'}</p>
+                            <p><span className="font-medium text-foreground">Densidad seca max.:</span> {densidadSecaMaxima ?? '-'}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
     )
 }
 
