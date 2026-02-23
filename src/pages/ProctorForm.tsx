@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
-import { ChevronDown, Download, Loader2, FlaskConical, Beaker } from 'lucide-react'
+import { ChevronDown, Download, Loader2, FlaskConical, Beaker, Trash2 } from 'lucide-react'
 import {
     getProctorEnsayoDetail,
     saveAndDownloadProctorExcel,
@@ -19,6 +19,17 @@ const SI_NO_OPTIONS: Array<'-' | 'SI' | 'NO'> = ['-', 'SI', 'NO']
 
 const REVISADO_POR_OPTIONS = ['-', 'FABIAN LA ROSA']
 const APROBADO_POR_OPTIONS = ['-', 'IRMA COAQUIRA']
+const PROCTOR_DRAFT_STORAGE_PREFIX = 'proctor_form_draft_v1'
+const AUTOSAVE_DEBOUNCE_MS = 700
+
+interface ProctorDraftSnapshot {
+    version: number
+    updatedAt: string
+    form: Partial<ProctorPayload>
+}
+
+const getDraftStorageKey = (ensayoId: number | null) =>
+    `${PROCTOR_DRAFT_STORAGE_PREFIX}:${ensayoId ?? 'new'}`
 
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
 
@@ -180,6 +191,69 @@ const normalizeSelect = <T extends string>(raw: unknown, options: readonly T[], 
     return options.includes(text) ? text : fallback
 }
 
+const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPayload => {
+    const merged = { ...buildInitialState(), ...(candidate || {}) }
+    return {
+        ...merged,
+        puntos: Array.from({ length: 5 }, (_, idx) => normalizePoint(merged.puntos?.[idx], idx)),
+        tamiz_masa_retenida_g: normalizeNumberArray(merged.tamiz_masa_retenida_g, 5),
+        tamiz_porcentaje_retenido: normalizeNumberArray(merged.tamiz_porcentaje_retenido, 5),
+        tamiz_porcentaje_retenido_acumulado: normalizeNumberArray(merged.tamiz_porcentaje_retenido_acumulado, 5),
+        metodo_ensayo: normalizeSelect(merged.metodo_ensayo, METODO_ENSAYO_OPTIONS, '-'),
+        metodo_preparacion: normalizeSelect(merged.metodo_preparacion, METODO_PREPARACION_OPTIONS, '-'),
+        tipo_apisonador: normalizeSelect(merged.tipo_apisonador, APISONADOR_OPTIONS, '-'),
+        excluyo_material_muestra: normalizeSelect(merged.excluyo_material_muestra, SI_NO_OPTIONS, '-'),
+        contenido_humedad_natural_pct: toOptionalNumber(merged.contenido_humedad_natural_pct),
+        tamiz_utilizado_metodo_codigo: merged.tamiz_utilizado_metodo_codigo || '-',
+        balanza_1g_codigo: merged.balanza_1g_codigo || '-',
+        balanza_codigo: merged.balanza_codigo || '-',
+        horno_110_codigo: merged.horno_110_codigo || '-',
+        molde_codigo: merged.molde_codigo || '-',
+        pison_codigo: merged.pison_codigo || '-',
+    }
+}
+
+const normalizeTextValue = (value: unknown): string => String(value ?? '').trim()
+
+const getComparableProctorFormState = (form: ProctorPayload): ProctorPayload => {
+    const hydrated = hydrateProctorFormState(form)
+    return {
+        ...hydrated,
+        muestra: normalizeTextValue(hydrated.muestra),
+        numero_ot: normalizeTextValue(hydrated.numero_ot),
+        fecha_ensayo: normalizeTextValue(hydrated.fecha_ensayo),
+        realizado_por: normalizeTextValue(hydrated.realizado_por),
+        tipo_muestra: normalizeTextValue(hydrated.tipo_muestra),
+        condicion_muestra: normalizeTextValue(hydrated.condicion_muestra),
+        tamano_maximo_particula_in: normalizeTextValue(hydrated.tamano_maximo_particula_in),
+        forma_particula: normalizeTextValue(hydrated.forma_particula),
+        clasificacion_sucs_visual: normalizeTextValue(hydrated.clasificacion_sucs_visual),
+        tamiz_utilizado_metodo_codigo: normalizeTextValue(hydrated.tamiz_utilizado_metodo_codigo) || '-',
+        balanza_1g_codigo: normalizeTextValue(hydrated.balanza_1g_codigo) || '-',
+        balanza_codigo: normalizeTextValue(hydrated.balanza_codigo) || '-',
+        horno_110_codigo: normalizeTextValue(hydrated.horno_110_codigo) || '-',
+        molde_codigo: normalizeTextValue(hydrated.molde_codigo) || '-',
+        pison_codigo: normalizeTextValue(hydrated.pison_codigo) || '-',
+        observaciones: normalizeTextValue(hydrated.observaciones),
+        revisado_por: normalizeTextValue(hydrated.revisado_por) || '-',
+        revisado_fecha: normalizeTextValue(hydrated.revisado_fecha),
+        aprobado_por: normalizeTextValue(hydrated.aprobado_por) || '-',
+        aprobado_fecha: normalizeTextValue(hydrated.aprobado_fecha),
+        puntos: hydrated.puntos.map((point, idx) => ({
+            ...normalizePoint(point, idx),
+            tara_numero: normalizeTextValue(point.tara_numero),
+        })),
+    }
+}
+
+const areFormsEquivalent = (left: ProctorPayload, right: ProctorPayload): boolean => {
+    return JSON.stringify(getComparableProctorFormState(left)) === JSON.stringify(getComparableProctorFormState(right))
+}
+
+const isFormAtInitialState = (form: ProctorPayload): boolean => {
+    return areFormsEquivalent(form, buildInitialState())
+}
+
 const getEnsayoIdFromQuery = (): number | null => {
     const raw = new URLSearchParams(window.location.search).get('ensayo_id')
     if (!raw) return null
@@ -307,6 +381,10 @@ export default function ProctorForm() {
     const [loading, setLoading] = useState(false)
     const [editingEnsayoId, setEditingEnsayoId] = useState<number | null>(() => getEnsayoIdFromQuery())
     const [loadingEnsayo, setLoadingEnsayo] = useState(false)
+    const [isClearDraftModalOpen, setIsClearDraftModalOpen] = useState(false)
+    const hydratedFromServerRef = useRef<ProctorPayload | null>(null)
+    const restoredDraftKeysRef = useRef<Set<string>>(new Set())
+    const draftStorageKey = useMemo(() => getDraftStorageKey(editingEnsayoId), [editingEnsayoId])
 
     const set = useCallback(<K extends keyof ProctorPayload>(key: K, value: ProctorPayload[K]) => {
         setForm(prev => ({ ...prev, [key]: value }))
@@ -477,26 +555,8 @@ export default function ProctorForm() {
                 }
 
                 if (!cancelled) {
-                    const payload = detail.payload
-                    const nextState: ProctorPayload = {
-                        ...buildInitialState(),
-                        ...payload,
-                        puntos: Array.from({ length: 5 }, (_, idx) => normalizePoint(payload.puntos?.[idx], idx)),
-                        tamiz_masa_retenida_g: normalizeNumberArray(payload.tamiz_masa_retenida_g, 5),
-                        tamiz_porcentaje_retenido: normalizeNumberArray(payload.tamiz_porcentaje_retenido, 5),
-                        tamiz_porcentaje_retenido_acumulado: normalizeNumberArray(payload.tamiz_porcentaje_retenido_acumulado, 5),
-                        metodo_ensayo: normalizeSelect(payload.metodo_ensayo, METODO_ENSAYO_OPTIONS, '-'),
-                        metodo_preparacion: normalizeSelect(payload.metodo_preparacion, METODO_PREPARACION_OPTIONS, '-'),
-                        tipo_apisonador: normalizeSelect(payload.tipo_apisonador, APISONADOR_OPTIONS, '-'),
-                        excluyo_material_muestra: normalizeSelect(payload.excluyo_material_muestra, SI_NO_OPTIONS, '-'),
-                        contenido_humedad_natural_pct: toOptionalNumber(payload.contenido_humedad_natural_pct),
-                        tamiz_utilizado_metodo_codigo: payload.tamiz_utilizado_metodo_codigo || '-',
-                        balanza_1g_codigo: payload.balanza_1g_codigo || '-',
-                        balanza_codigo: payload.balanza_codigo || '-',
-                        horno_110_codigo: payload.horno_110_codigo || '-',
-                        molde_codigo: payload.molde_codigo || '-',
-                        pison_codigo: payload.pison_codigo || '-',
-                    }
+                    const nextState = hydrateProctorFormState(detail.payload)
+                    hydratedFromServerRef.current = nextState
                     setForm(nextState)
                 }
             } catch (err: unknown) {
@@ -514,6 +574,74 @@ export default function ProctorForm() {
             cancelled = true
         }
     }, [editingEnsayoId])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        if (loadingEnsayo) return
+        if (restoredDraftKeysRef.current.has(draftStorageKey)) return
+
+        restoredDraftKeysRef.current.add(draftStorageKey)
+        const raw = localStorage.getItem(draftStorageKey)
+        if (!raw) return
+
+        try {
+            const parsed = JSON.parse(raw) as ProctorDraftSnapshot
+            if (!parsed || typeof parsed !== 'object' || typeof parsed.form !== 'object') {
+                localStorage.removeItem(draftStorageKey)
+                return
+            }
+
+            const hydratedDraft = hydrateProctorFormState(parsed.form)
+
+            if (editingEnsayoId && hydratedFromServerRef.current && areFormsEquivalent(hydratedDraft, hydratedFromServerRef.current)) {
+                localStorage.removeItem(draftStorageKey)
+                return
+            }
+
+            setForm(hydratedDraft)
+            toast.success('Se restauró un borrador local.')
+        } catch {
+            localStorage.removeItem(draftStorageKey)
+        }
+    }, [draftStorageKey, editingEnsayoId, loadingEnsayo])
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        if (loadingEnsayo) return
+
+        const timeoutId = window.setTimeout(() => {
+            const sameAsServer = Boolean(
+                editingEnsayoId &&
+                hydratedFromServerRef.current &&
+                areFormsEquivalent(form, hydratedFromServerRef.current)
+            )
+
+            if (isFormAtInitialState(form) || sameAsServer) {
+                localStorage.removeItem(draftStorageKey)
+                return
+            }
+
+            const snapshot: ProctorDraftSnapshot = {
+                version: 1,
+                updatedAt: new Date().toISOString(),
+                form,
+            }
+            localStorage.setItem(draftStorageKey, JSON.stringify(snapshot))
+        }, AUTOSAVE_DEBOUNCE_MS)
+
+        return () => window.clearTimeout(timeoutId)
+    }, [draftStorageKey, editingEnsayoId, form, loadingEnsayo])
+
+    useEffect(() => {
+        if (!isClearDraftModalOpen) return
+        const onEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsClearDraftModalOpen(false)
+            }
+        }
+        window.addEventListener('keydown', onEscape)
+        return () => window.removeEventListener('keydown', onEscape)
+    }, [isClearDraftModalOpen])
 
     const buildPayload = useCallback((): ProctorPayload => {
         const mergedPoints = form.puntos.map((point, idx) => ({
@@ -546,6 +674,35 @@ export default function ProctorForm() {
         }
     }, [])
 
+    const clearLocalDraft = useCallback(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(draftStorageKey)
+        }
+
+        if (editingEnsayoId && hydratedFromServerRef.current) {
+            setForm(hydratedFromServerRef.current)
+            toast.success('Cambios locales limpiados. Se restauraron los datos guardados.')
+            return
+        }
+
+        setForm(buildInitialState())
+        toast.success('Datos limpiados.')
+    }, [draftStorageKey, editingEnsayoId])
+
+    const handleClearLocalData = useCallback(() => {
+        const hasChanges = !isFormAtInitialState(form)
+        if (!hasChanges) {
+            clearLocalDraft()
+            return
+        }
+        setIsClearDraftModalOpen(true)
+    }, [clearLocalDraft, form])
+
+    const confirmClearLocalData = useCallback(() => {
+        setIsClearDraftModalOpen(false)
+        clearLocalDraft()
+    }, [clearLocalDraft])
+
     const handleSave = useCallback(async (withDownload: boolean) => {
         if (!form.muestra || !form.numero_ot || !form.realizado_por) {
             toast.error('Complete los campos obligatorios: Muestra, N OT y Realizado por')
@@ -564,6 +721,10 @@ export default function ProctorForm() {
                 toast.success(editingEnsayoId ? 'Formato Proctor actualizado correctamente.' : 'Formato Proctor guardado correctamente.')
             }
 
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(draftStorageKey)
+            }
+            hydratedFromServerRef.current = null
             setForm(buildInitialState())
             setEditingEnsayoId(null)
             closeParentModalIfEmbedded()
@@ -579,7 +740,7 @@ export default function ProctorForm() {
         } finally {
             setLoading(false)
         }
-    }, [buildPayload, closeParentModalIfEmbedded, downloadBlob, editingEnsayoId, form.muestra, form.numero_ot, form.realizado_por])
+    }, [buildPayload, closeParentModalIfEmbedded, downloadBlob, draftStorageKey, editingEnsayoId, form.muestra, form.numero_ot, form.realizado_por])
 
     return (
         <div className="max-w-[1780px] mx-auto p-4 md:p-6">
@@ -747,7 +908,15 @@ export default function ProctorForm() {
                     </div>
                 </Section>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button
+                        onClick={handleClearLocalData}
+                        disabled={loading}
+                        className="h-11 rounded-lg border border-input bg-background text-foreground font-medium hover:bg-muted/60 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        Limpiar datos
+                    </button>
                     <button onClick={() => void handleSave(false)} disabled={loading} className="h-11 rounded-lg bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                         {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar'}
                     </button>
@@ -765,6 +934,16 @@ export default function ProctorForm() {
                     densidadSecaMaxima={densidadSecaMaxima}
                 />
             </div>
+
+            <ConfirmActionModal
+                isOpen={isClearDraftModalOpen}
+                title="Limpiar datos no guardados"
+                message="Se limpiarán los datos no guardados. ¿Deseas continuar?"
+                confirmText="Sí, limpiar"
+                cancelText="Cancelar"
+                onConfirm={confirmClearLocalData}
+                onCancel={() => setIsClearDraftModalOpen(false)}
+            />
         </div>
     )
 }
@@ -900,6 +1079,66 @@ function SideProgressPanel({
                 </div>
             </div>
         </aside>
+    )
+}
+
+function ConfirmActionModal({
+    isOpen,
+    title,
+    message,
+    confirmText,
+    cancelText,
+    onConfirm,
+    onCancel,
+}: {
+    isOpen: boolean
+    title: string
+    message: string
+    confirmText: string
+    cancelText: string
+    onConfirm: () => void
+    onCancel: () => void
+}) {
+    if (!isOpen) return null
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+            <button
+                type="button"
+                className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm cursor-default"
+                onClick={onCancel}
+                aria-label="Cerrar modal"
+            />
+            <div className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl">
+                <div className="px-6 pt-6 pb-4">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                            <Trash2 className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                            <p className="text-sm leading-relaxed text-muted-foreground">{message}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="px-6 pb-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="h-10 px-4 rounded-lg border border-input bg-background text-foreground text-sm font-medium hover:bg-muted/60 transition-colors"
+                    >
+                        {cancelText}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className="h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>
     )
 }
 
