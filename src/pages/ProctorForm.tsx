@@ -814,8 +814,8 @@ export default function ProctorForm() {
                                 <tr className="text-xs font-semibold text-muted-foreground">
                                     <th className="w-80 px-3 py-2 border-b border-r border-border text-left">DESCRIPCION</th>
                                     <th className="w-20 px-2 py-2 border-b border-r border-border text-center">UND</th>
-                                    {POINT_COLUMNS.map((label) => (
-                                        <th key={label} className="w-36 px-2 py-2 border-b border-r border-border text-center last:border-r-0">{label}</th>
+                                    {POINT_COLUMNS.map((_, idx) => (
+                                        <th key={`densidad-humeda-head-${idx}`} className="w-36 px-2 py-2 border-b border-r border-border text-center last:border-r-0">{idx + 1}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -866,17 +866,34 @@ export default function ProctorForm() {
 
                 <Section title="Descripcion de la muestra y condiciones del ensayo">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                            <Input label="Tipo de muestra" value={form.tipo_muestra || ''} onChange={v => set('tipo_muestra', v)} />
-                            <SelectField label="Condicion de la muestra" value={form.condicion_muestra || '-'} options={CONDICION_MUESTRA_OPTIONS} onChange={v => set('condicion_muestra', v as ProctorPayload['condicion_muestra'])} />
-                            <Input label="Tamano maximo de la particula (in)" value={form.tamano_maximo_particula_in || ''} onChange={v => set('tamano_maximo_particula_in', v)} />
-                            <Input label="Forma de la particula" value={form.forma_particula || ''} onChange={v => set('forma_particula', v)} />
-                            <Input label="Clasificacion SUCS o visual" value={form.clasificacion_sucs_visual || ''} onChange={v => set('clasificacion_sucs_visual', v)} />
-                            <SelectField label="Metodo de ensayo" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
-                            <SelectField label="Metodo de preparacion" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
-                            <SelectField label="Tipo de apisonador" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
-                            <NumberInput label="Contenido de humedad natural (%)" value={form.contenido_humedad_natural_pct} onChange={v => setNum('contenido_humedad_natural_pct', v)} />
-                            <SelectField label="Se excluyo algun material de la muestra" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
+                        <div className="space-y-4">
+                            <div className="rounded-md border border-border p-3 space-y-3">
+                                <h3 className="text-sm font-semibold text-foreground">Descripcion de la muestra</h3>
+                                <Input label="Tipo de muestra" value={form.tipo_muestra || ''} onChange={v => set('tipo_muestra', v)} />
+                                <SelectField label="Condicion de la muestra (-, ALTERADO, INTACTA)" value={form.condicion_muestra || '-'} options={CONDICION_MUESTRA_OPTIONS} onChange={v => set('condicion_muestra', v as ProctorPayload['condicion_muestra'])} />
+                                <Input label="Tamano maximo de la particula (in)" value={form.tamano_maximo_particula_in || ''} onChange={v => set('tamano_maximo_particula_in', v)} />
+                                <Input label="Forma de la particula" value={form.forma_particula || ''} onChange={v => set('forma_particula', v)} />
+                                <Input label="Clasificacion SUCS o visual" value={form.clasificacion_sucs_visual || ''} onChange={v => set('clasificacion_sucs_visual', v)} />
+                            </div>
+
+                            <div className="rounded-md border border-border p-3 space-y-3">
+                                <h3 className="text-sm font-semibold text-foreground">Condiciones del ensayo</h3>
+                                <SelectField label="Metodo de ensayo (-, A, B, C)" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
+                                <SelectField label="Metodo de preparacion (HUMEDO o SECO)" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
+                                <SelectField label="Tipo de apisonador (MANUAL o MECANICO)" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
+                                <NumberInput label="Contenido de humedad natural (%)" value={form.contenido_humedad_natural_pct} onChange={v => setNum('contenido_humedad_natural_pct', v)} />
+                                <SelectField label="Se excluyo algun material de la muestra (SI/NO)" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones</label>
+                                    <textarea
+                                        value={form.observaciones || ''}
+                                        onChange={e => set('observaciones', e.target.value)}
+                                        rows={3}
+                                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                                        placeholder="Observaciones del ensayo..."
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         <div>
@@ -909,23 +926,43 @@ export default function ProctorForm() {
 
                 <Section title="Equipo utilizado y codigos">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                        <SelectField label="Tamiz utilizado metodo (codigo)" value={form.tamiz_utilizado_metodo_codigo || '-'} options={TAMIZ_METODO_OPTIONS} onChange={v => set('tamiz_utilizado_metodo_codigo', v)} />
-                        <SelectField label="Balanza 1 g (codigo)" value={form.balanza_1g_codigo || '-'} options={BALANZA_1G_OPTIONS} onChange={v => set('balanza_1g_codigo', v)} />
-                        <SelectField label="Balanza 0,1 g (codigo)" value={form.balanza_codigo || '-'} options={BALANZA_01G_OPTIONS} onChange={v => set('balanza_codigo', v)} />
-                        <SelectField label="Horno 110 C (codigo)" value={form.horno_110_codigo || '-'} options={HORNO_110_OPTIONS} onChange={v => set('horno_110_codigo', v)} />
-                        <SelectField label="Molde (codigo)" value={form.molde_codigo || '-'} options={MOLDE_OPTIONS} onChange={v => set('molde_codigo', v)} />
-                        <SelectField label="Pison (codigo)" value={form.pison_codigo || '-'} options={PISON_OPTIONS} onChange={v => set('pison_codigo', v)} />
+                        <SelectField
+                            label="Tamiz utilizado metodo (-, INS-0050 3/4in, INS-0053 No 4, INS-0052 3/8in)"
+                            value={form.tamiz_utilizado_metodo_codigo || '-'}
+                            options={TAMIZ_METODO_OPTIONS}
+                            onChange={v => set('tamiz_utilizado_metodo_codigo', v)}
+                        />
+                        <SelectField
+                            label="Balanza 1 g (-, EQP-0054)"
+                            value={form.balanza_1g_codigo || '-'}
+                            options={BALANZA_1G_OPTIONS}
+                            onChange={v => set('balanza_1g_codigo', v)}
+                        />
+                        <SelectField
+                            label="Balanza 0,1 g (-, EQP-0046)"
+                            value={form.balanza_codigo || '-'}
+                            options={BALANZA_01G_OPTIONS}
+                            onChange={v => set('balanza_codigo', v)}
+                        />
+                        <SelectField
+                            label="Horno 110 C (-, EQP-0049)"
+                            value={form.horno_110_codigo || '-'}
+                            options={HORNO_110_OPTIONS}
+                            onChange={v => set('horno_110_codigo', v)}
+                        />
+                        <SelectField
+                            label="Molde (-, INS-0195 MOLDE 6in, INS-0114 MOLDE 4in)"
+                            value={form.molde_codigo || '-'}
+                            options={MOLDE_OPTIONS}
+                            onChange={v => set('molde_codigo', v)}
+                        />
+                        <SelectField
+                            label="Pison (-, INS-0196)"
+                            value={form.pison_codigo || '-'}
+                            options={PISON_OPTIONS}
+                            onChange={v => set('pison_codigo', v)}
+                        />
                     </div>
-                </Section>
-
-                <Section title="Observaciones">
-                    <textarea
-                        value={form.observaciones || ''}
-                        onChange={e => set('observaciones', e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                        placeholder="Observaciones del ensayo..."
-                    />
                 </Section>
 
                 <Section title="Revisado / Aprobado">
