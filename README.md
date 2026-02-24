@@ -1,16 +1,17 @@
-# Proctor CRM Frontend
+# Proctor + LLP CRM Frontend
 
-Microfrontend del modulo **Proctor Modificado ASTM D1557-12(2021)** para Geofal.
+Microfrontend de los modulos **Proctor Modificado ASTM D1557-12(2021)** y **LLP ASTM D4318-17e1** para Geofal.
 
 - Dominio productivo: `https://proctor.geofal.com.pe`
-- Backend API: `https://api.geofal.com.pe` (rutas `/api/proctor`)
+- Dominio productivo LLP: `https://llp.geofal.com.pe`
+- Backend API: `https://api.geofal.com.pe` (rutas `/api/proctor`, `/api/llp`)
 - Integracion shell: `crm-geofal` via iframe modal (`ProctorModule`)
 
 ## Objetivo del modulo
 
-- Registrar/editar ensayos Proctor.
+- Registrar/editar ensayos Proctor y LLP.
 - Guardar estado en BD (`EN PROCESO`/`COMPLETO`).
-- Exportar Excel con plantilla oficial `Template_Proctor.xlsx`.
+- Exportar Excel con plantillas oficiales (`Template_Proctor.xlsx`, `Template_LLP.xlsx`).
 - Cerrar modal del CRM automaticamente al finalizar guardado.
 
 ## Stack tecnico
@@ -26,7 +27,9 @@ Microfrontend del modulo **Proctor Modificado ASTM D1557-12(2021)** para Geofal.
 
 - Lee `token` desde URL (`?token=...`) y lo persiste en `localStorage`.
 - Si no hay token y no esta embebido, bloquea acceso y ofrece ir al login del CRM.
-- Renderiza formulario principal: `ProctorForm`.
+- Renderiza formulario según ruta:
+  - `/proctor` o `/` -> `ProctorForm`
+  - `/llp` -> `LLPForm`
 
 ### 2) Guard de sesion (`src/components/SessionGuard.tsx`)
 

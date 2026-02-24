@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Toaster } from 'react-hot-toast'
 import ProctorForm from './pages/ProctorForm'
+import LLPForm from './pages/LLPForm'
 import { SessionGuard } from './components/SessionGuard'
 
 const CRM_LOGIN_URL = import.meta.env.VITE_CRM_LOGIN_URL || 'http://localhost:3000/login'
@@ -78,11 +79,14 @@ function AccessGate({ children }: { children: ReactNode }) {
 }
 
 function App() {
+    const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '/'
+    const isLLPRoute = pathname.startsWith('/llp')
+
     return (
         <div className="min-h-screen bg-background font-sans antialiased">
             <AccessGate>
                 <SessionGuard />
-                <ProctorForm />
+                {isLLPRoute ? <LLPForm /> : <ProctorForm />}
             </AccessGate>
             <Toaster position="top-right" />
         </div>

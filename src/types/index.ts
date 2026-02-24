@@ -90,3 +90,81 @@ export interface ProctorSaveResponse {
     fecha_creacion?: string | null
     fecha_actualizacion?: string | null
 }
+
+export interface LLPPuntoRow {
+    recipiente_numero?: string | null
+    numero_golpes?: number | null
+    masa_recipiente_suelo_humedo?: number | null
+    masa_recipiente_suelo_seco?: number | null
+    masa_recipiente_suelo_seco_1?: number | null
+    masa_recipiente?: number | null
+}
+
+export interface LLPPayload {
+    muestra: string
+    numero_ot: string
+    fecha_ensayo: string
+    realizado_por: string
+
+    metodo_ensayo_limite_liquido: "-" | "MULTIPUNTO" | "UNIPUNTO"
+    herramienta_ranurado_limite_liquido: "-" | "METAL" | "PLASTICO"
+    dispositivo_limite_liquido: "-" | "MANUAL" | "MECANICO"
+    metodo_laminacion_limite_plastico: "-" | "MANUAL" | "DISPOSITIVO DE LAMINACION"
+    contenido_humedad_muestra_inicial_pct?: number | null
+    proceso_seleccion_muestra?: string | null
+    metodo_preparacion_muestra: "-" | "HUMEDO" | "SECADO AL AIRE" | "SECADO AL HORNO"
+
+    tipo_muestra?: string | null
+    condicion_muestra: "-" | "ALTERADO" | "INTACTO"
+    tamano_maximo_visual_in?: string | null
+    porcentaje_retenido_tamiz_40_pct?: number | null
+    forma_particula?: string | null
+
+    puntos: LLPPuntoRow[]
+
+    balanza_001g_codigo?: string | null
+    horno_110_codigo?: string | null
+    copa_casagrande_codigo?: string | null
+    ranurador_codigo?: string | null
+
+    observaciones?: string | null
+    revisado_por?: string | null
+    revisado_fecha?: string | null
+    aprobado_por?: string | null
+    aprobado_fecha?: string | null
+}
+
+export interface LLPEnsayoSummary {
+    id: number
+    numero_ensayo: string
+    numero_ot: string
+    cliente?: string | null
+    muestra?: string | null
+    fecha_documento?: string | null
+    estado: string
+    limite_liquido_promedio?: number | null
+    limite_plastico_promedio?: number | null
+    indice_plasticidad?: number | null
+    bucket?: string | null
+    object_key?: string | null
+    fecha_creacion?: string | null
+    fecha_actualizacion?: string | null
+}
+
+export interface LLPEnsayoDetail extends LLPEnsayoSummary {
+    payload?: LLPPayload | null
+}
+
+export interface LLPSaveResponse {
+    id: number
+    numero_ensayo: string
+    numero_ot: string
+    estado: string
+    limite_liquido_promedio?: number | null
+    limite_plastico_promedio?: number | null
+    indice_plasticidad?: number | null
+    bucket?: string | null
+    object_key?: string | null
+    fecha_creacion?: string | null
+    fecha_actualizacion?: string | null
+}

@@ -1,5 +1,9 @@
 import axios from 'axios'
 import type {
+    LLPPayload,
+    LLPSaveResponse,
+    LLPEnsayoDetail,
+    LLPEnsayoSummary,
     ProctorPayload,
     ProctorSaveResponse,
     ProctorEnsayoDetail,
@@ -72,6 +76,51 @@ export async function listProctorEnsayos(limit = 100): Promise<ProctorEnsayoSumm
 
 export async function getProctorEnsayoDetail(ensayoId: number): Promise<ProctorEnsayoDetail> {
     const { data } = await api.get<ProctorEnsayoDetail>(`/api/proctor/${ensayoId}`)
+    return data
+}
+
+export async function saveLLPEnsayo(
+    payload: LLPPayload,
+    ensayoId?: number,
+): Promise<LLPSaveResponse> {
+    const { data } = await api.post<LLPSaveResponse>('/api/llp/excel', payload, {
+        params: {
+            download: false,
+            ensayo_id: ensayoId,
+        },
+    })
+    return data
+}
+
+export async function saveAndDownloadLLPExcel(
+    payload: LLPPayload,
+    ensayoId?: number,
+): Promise<{ blob: Blob; ensayoId?: number }> {
+    const response = await api.post('/api/llp/excel', payload, {
+        params: {
+            download: true,
+            ensayo_id: ensayoId,
+        },
+        responseType: 'blob',
+    })
+
+    const llpIdHeader = response.headers['x-llp-id']
+    const parsedId = Number(llpIdHeader)
+    return {
+        blob: response.data,
+        ensayoId: Number.isFinite(parsedId) ? parsedId : undefined,
+    }
+}
+
+export async function listLLPEnsayos(limit = 100): Promise<LLPEnsayoSummary[]> {
+    const { data } = await api.get<LLPEnsayoSummary[]>('/api/llp/', {
+        params: { limit },
+    })
+    return data
+}
+
+export async function getLLPEnsayoDetail(ensayoId: number): Promise<LLPEnsayoDetail> {
+    const { data } = await api.get<LLPEnsayoDetail>(`/api/llp/${ensayoId}`)
     return data
 }
 
