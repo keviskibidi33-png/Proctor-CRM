@@ -19,7 +19,9 @@ const METODO_PREPARACION_OPTIONS: Array<'-' | 'HUMEDO' | 'SECO'> = ['-', 'HUMEDO
 const APISONADOR_OPTIONS: Array<'-' | 'MANUAL' | 'MECANICO'> = ['-', 'MANUAL', 'MECANICO']
 const SI_NO_OPTIONS: Array<'-' | 'SI' | 'NO'> = ['-', 'SI', 'NO']
 const GOLPES_OPTIONS: Array<'-' | '25' | '56'> = ['-', '25', '56']
-const TAMIZ_METODO_OPTIONS = ['-', 'INS-0050 (3/4in)', 'INS-0053 (No 4)', 'INS-0052 (3/8in)'] as const
+const TAMIZ_METODO_COMBINADO = 'INS-0050 (3/4in), INS-0053 (No 4), INS-0052 (3/8in)' as const
+const TAMIZ_METODO_OPTIONS = ['-', TAMIZ_METODO_COMBINADO] as const
+const TAMIZ_METODO_LEGACY_OPTIONS = ['INS-0050 (3/4in)', 'INS-0053 (No 4)', 'INS-0052 (3/8in)'] as const
 const BALANZA_1G_OPTIONS = ['-', 'EQP-0054'] as const
 const BALANZA_01G_OPTIONS = ['-', 'EQP-0046'] as const
 const HORNO_110_OPTIONS = ['-', 'EQP-0049'] as const
@@ -30,6 +32,12 @@ const REVISADO_POR_OPTIONS = ['-', 'FABIAN LA ROSA']
 const APROBADO_POR_OPTIONS = ['-', 'IRMA COAQUIRA']
 const PROCTOR_DRAFT_STORAGE_PREFIX = 'proctor_form_draft_v1'
 const AUTOSAVE_DEBOUNCE_MS = 700
+const STICKY_DESC_WIDTH_CLASS = "w-[320px] min-w-[320px] max-w-[320px]"
+const STICKY_UNIT_WIDTH_CLASS = "w-[80px] min-w-[80px] max-w-[80px]"
+const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-muted/40 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.45)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border"
+const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-background relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.35)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border"
+const STICKY_UNIT_TH_CLASS = "sticky left-[320px] z-30 bg-muted/40 relative"
+const STICKY_UNIT_TD_CLASS = "sticky left-[320px] z-20 bg-background relative"
 
 interface ProctorDraftSnapshot {
     version: number
@@ -41,19 +49,6 @@ const getDraftStorageKey = (ensayoId: number | null) =>
     `${PROCTOR_DRAFT_STORAGE_PREFIX}:${ensayoId ?? 'new'}`
 
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
-
-const normalizeMuestraCode = (raw: string): string => {
-    const value = raw.trim().toUpperCase()
-    if (!value) return ''
-
-    const compact = value.replace(/\s+/g, '')
-    const year = getCurrentYearShort()
-    const match = compact.match(/^(\d+)(?:-SU)?(?:-(\d{2}))?$/)
-    if (match) {
-        return `${match[1]}-SU-${match[2] || year}`
-    }
-    return value
-}
 
 const normalizeNumeroOtCode = (raw: string): string => {
     const value = raw.trim().toUpperCase()
@@ -201,8 +196,22 @@ const normalizePoint = (value: ProctorPunto | undefined, index: number): Proctor
 }
 
 const normalizeSelect = <T extends string>(raw: unknown, options: readonly T[], fallback: T): T => {
-    const text = String(raw || '').trim().toUpperCase() as T
-    return options.includes(text) ? text : fallback
+    const text = String(raw || '').trim().toUpperCase()
+    const match = options.find(option => option.toUpperCase() === text)
+    return (match ?? fallback) as T
+}
+
+const normalizeTamizMetodoSelect = (raw: unknown): (typeof TAMIZ_METODO_OPTIONS)[number] => {
+    const text = String(raw || '').trim().toUpperCase()
+    if (!text || text === '-') return '-'
+    const currentMatch = TAMIZ_METODO_OPTIONS.find(option => option.toUpperCase() === text)
+    if (currentMatch) {
+        return currentMatch
+    }
+    if (TAMIZ_METODO_LEGACY_OPTIONS.some(option => option.toUpperCase() === text)) {
+        return TAMIZ_METODO_COMBINADO
+    }
+    return '-'
 }
 
 const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPayload => {
@@ -219,7 +228,7 @@ const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPay
         tipo_apisonador: normalizeSelect(merged.tipo_apisonador, APISONADOR_OPTIONS, '-'),
         excluyo_material_muestra: normalizeSelect(merged.excluyo_material_muestra, SI_NO_OPTIONS, '-'),
         contenido_humedad_natural_pct: toOptionalNumber(merged.contenido_humedad_natural_pct),
-        tamiz_utilizado_metodo_codigo: normalizeSelect(merged.tamiz_utilizado_metodo_codigo, TAMIZ_METODO_OPTIONS, '-'),
+        tamiz_utilizado_metodo_codigo: normalizeTamizMetodoSelect(merged.tamiz_utilizado_metodo_codigo),
         balanza_1g_codigo: normalizeSelect(merged.balanza_1g_codigo, BALANZA_1G_OPTIONS, '-'),
         balanza_codigo: normalizeSelect(merged.balanza_codigo, BALANZA_01G_OPTIONS, '-'),
         horno_110_codigo: normalizeSelect(merged.horno_110_codigo, HORNO_110_OPTIONS, '-'),
@@ -412,10 +421,19 @@ export default function ProctorForm() {
 
     const setPointNumber = useCallback((index: number, key: PointNumberKey, raw: string) => {
         const val = raw === '' ? null : Number(raw)
+        const normalized = Number.isFinite(val) ? val : null
         setForm(prev => {
+            if (key === 'masa_molde_compactacion_b' || key === 'volumen_molde_compactacion_d') {
+                const next = prev.puntos.map((point) => ({
+                    ...point,
+                    [key]: normalized,
+                }))
+                return { ...prev, puntos: next }
+            }
+
             const next = [...prev.puntos]
             const row = { ...next[index] }
-            row[key] = Number.isFinite(val) ? val : null
+            row[key] = normalized
             next[index] = row
             return { ...prev, puntos: next }
         })
@@ -800,20 +818,20 @@ export default function ProctorForm() {
                     <div className="space-y-5">
                 <Section title="Encabezado" icon={<FlaskConical className="h-4 w-4" />}>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <Input label="Muestra *" value={form.muestra} onChange={v => set('muestra', v)} onBlur={() => applyFormattedField('muestra', normalizeMuestraCode)} placeholder="123-SU-26" />
+                        <Input label="Muestra *" value={form.muestra} onChange={v => set('muestra', v)} placeholder="123-SU-26 / 123-AG-26" />
                         <Input label="N OT *" value={form.numero_ot} onChange={v => set('numero_ot', v)} onBlur={() => applyFormattedField('numero_ot', normalizeNumeroOtCode)} placeholder="1234-26" />
                         <Input label="Fecha de ensayo" value={form.fecha_ensayo} onChange={v => set('fecha_ensayo', v)} onBlur={() => applyFormattedField('fecha_ensayo', normalizeFlexibleDate)} placeholder="DD/MM/AA" />
                         <Input label="Realizado por *" value={form.realizado_por} onChange={v => set('realizado_por', v)} placeholder="Iniciales o nombre" />
                     </div>
                 </Section>
 
-                <Section title="Densidad humeda (filas 15-22)">
-                    <div className="overflow-x-auto rounded-md border border-border">
-                        <table className="w-full min-w-[1080px] text-sm">
+                <Section title="Densidad humeda">
+                    <div className="overflow-x-auto rounded-md border border-border relative">
+                        <table className="w-full min-w-[1180px] table-fixed text-sm">
                             <thead className="bg-muted/40">
                                 <tr className="text-xs font-semibold text-muted-foreground">
-                                    <th className="w-80 px-3 py-2 border-b border-r border-border text-left">DESCRIPCION</th>
-                                    <th className="w-20 px-2 py-2 border-b border-r border-border text-center">UND</th>
+                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-border text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
+                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((_, idx) => (
                                         <th key={`densidad-humeda-head-${idx}`} className="w-36 px-2 py-2 border-b border-r border-border text-center last:border-r-0">{idx + 1}</th>
                                     ))}
@@ -833,13 +851,13 @@ export default function ProctorForm() {
                     </div>
                 </Section>
 
-                <Section title="Contenido humedad - Densidad seca (filas 24-33)">
-                    <div className="overflow-x-auto rounded-md border border-border">
-                        <table className="w-full min-w-[1080px] text-sm">
+                <Section title="Contenido humedad - Densidad seca">
+                    <div className="overflow-x-auto rounded-md border border-border relative">
+                        <table className="w-full min-w-[1180px] table-fixed text-sm">
                             <thead className="bg-muted/40">
                                 <tr className="text-xs font-semibold text-muted-foreground">
-                                    <th className="w-80 px-3 py-2 border-b border-r border-border text-left">DESCRIPCION</th>
-                                    <th className="w-20 px-2 py-2 border-b border-r border-border text-center">UND</th>
+                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-border text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
+                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((label) => (
                                         <th key={label} className="w-36 px-2 py-2 border-b border-r border-border text-center last:border-r-0">{label}</th>
                                     ))}
@@ -870,7 +888,7 @@ export default function ProctorForm() {
                             <div className="rounded-md border border-border p-3 space-y-3">
                                 <h3 className="text-sm font-semibold text-foreground">Descripcion de la muestra</h3>
                                 <Input label="Tipo de muestra" value={form.tipo_muestra || ''} onChange={v => set('tipo_muestra', v)} />
-                                <SelectField label="Condicion de la muestra (-, ALTERADO, INTACTA)" value={form.condicion_muestra || '-'} options={CONDICION_MUESTRA_OPTIONS} onChange={v => set('condicion_muestra', v as ProctorPayload['condicion_muestra'])} />
+                                <SelectField label="Condicion de la muestra" value={form.condicion_muestra || '-'} options={CONDICION_MUESTRA_OPTIONS} onChange={v => set('condicion_muestra', v as ProctorPayload['condicion_muestra'])} />
                                 <Input label="Tamano maximo de la particula (in)" value={form.tamano_maximo_particula_in || ''} onChange={v => set('tamano_maximo_particula_in', v)} />
                                 <Input label="Forma de la particula" value={form.forma_particula || ''} onChange={v => set('forma_particula', v)} />
                                 <Input label="Clasificacion SUCS o visual" value={form.clasificacion_sucs_visual || ''} onChange={v => set('clasificacion_sucs_visual', v)} />
@@ -878,11 +896,11 @@ export default function ProctorForm() {
 
                             <div className="rounded-md border border-border p-3 space-y-3">
                                 <h3 className="text-sm font-semibold text-foreground">Condiciones del ensayo</h3>
-                                <SelectField label="Metodo de ensayo (-, A, B, C)" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
-                                <SelectField label="Metodo de preparacion (HUMEDO o SECO)" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
-                                <SelectField label="Tipo de apisonador (MANUAL o MECANICO)" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
+                                <SelectField label="Metodo de ensayo" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
+                                <SelectField label="Metodo de preparacion" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
+                                <SelectField label="Tipo de apisonador" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
                                 <NumberInput label="Contenido de humedad natural (%)" value={form.contenido_humedad_natural_pct} onChange={v => setNum('contenido_humedad_natural_pct', v)} />
-                                <SelectField label="Se excluyo algun material de la muestra (SI/NO)" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
+                                <SelectField label="Se excluyo algun material de la muestra" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones</label>
                                     <textarea
@@ -911,53 +929,63 @@ export default function ProctorForm() {
                                         {SIEVE_LABELS.map((label, idx) => (
                                             <tr key={label}>
                                                 <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-                                                <td className="px-2 py-2 border-b border-r border-border"><TableNumInput value={form.tamiz_masa_retenida_g[idx]} onChange={raw => setSieveValue('tamiz_masa_retenida_g', idx, raw)} /></td>
-                                                <td className="px-2 py-2 border-b border-r border-border"><TableNumInput value={form.tamiz_porcentaje_retenido[idx]} onChange={raw => setSieveValue('tamiz_porcentaje_retenido', idx, raw)} /></td>
-                                                <td className="px-2 py-2 border-b border-border"><TableNumInput value={form.tamiz_porcentaje_retenido_acumulado[idx]} onChange={raw => setSieveValue('tamiz_porcentaje_retenido_acumulado', idx, raw)} /></td>
+                                                <td className="px-2 py-2 border-b border-r border-border">
+                                                    {idx < 4 ? (
+                                                        <TableNumInput value={form.tamiz_masa_retenida_g[idx]} onChange={raw => setSieveValue('tamiz_masa_retenida_g', idx, raw)} />
+                                                    ) : (
+                                                        <TableComputedValue value={sievePreview.mass[idx] ?? null} />
+                                                    )}
+                                                </td>
+                                                <td className="px-2 py-2 border-b border-r border-border">
+                                                    <TableComputedValue value={sievePreview.pct[idx] ?? null} />
+                                                </td>
+                                                <td className="px-2 py-2 border-b border-border">
+                                                    <TableComputedValue value={sievePreview.acc[idx] ?? null} />
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-                            <p className="mt-2 text-xs text-muted-foreground">Si deja porcentajes vacios, el sistema los calcula automaticamente a partir de la masa total.</p>
+                            <p className="mt-2 text-xs text-muted-foreground">Los porcentajes y acumulados se calculan automaticamente en simultaneo a partir de la masa retenida.</p>
                         </div>
                     </div>
                 </Section>
 
-                <Section title="Equipo utilizado y codigos">
+                <Section title="Equipo utilizado">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         <SelectField
-                            label="Tamiz utilizado metodo (-, INS-0050 3/4in, INS-0053 No 4, INS-0052 3/8in)"
+                            label="Tamiz utilizado metodo"
                             value={form.tamiz_utilizado_metodo_codigo || '-'}
                             options={TAMIZ_METODO_OPTIONS}
                             onChange={v => set('tamiz_utilizado_metodo_codigo', v)}
                         />
                         <SelectField
-                            label="Balanza 1 g (-, EQP-0054)"
+                            label="Balanza 1 g"
                             value={form.balanza_1g_codigo || '-'}
                             options={BALANZA_1G_OPTIONS}
                             onChange={v => set('balanza_1g_codigo', v)}
                         />
                         <SelectField
-                            label="Balanza 0,1 g (-, EQP-0046)"
+                            label="Balanza 0,1 g"
                             value={form.balanza_codigo || '-'}
                             options={BALANZA_01G_OPTIONS}
                             onChange={v => set('balanza_codigo', v)}
                         />
                         <SelectField
-                            label="Horno 110 C (-, EQP-0049)"
+                            label="Horno 110 C"
                             value={form.horno_110_codigo || '-'}
                             options={HORNO_110_OPTIONS}
                             onChange={v => set('horno_110_codigo', v)}
                         />
                         <SelectField
-                            label="Molde (-, INS-0195 MOLDE 6in, INS-0114 MOLDE 4in)"
+                            label="Molde"
                             value={form.molde_codigo || '-'}
                             options={MOLDE_OPTIONS}
                             onChange={v => set('molde_codigo', v)}
                         />
                         <SelectField
-                            label="Pison (-, INS-0196)"
+                            label="Pison"
                             value={form.pison_codigo || '-'}
                             options={PISON_OPTIONS}
                             onChange={v => set('pison_codigo', v)}
@@ -1361,8 +1389,8 @@ function TableRowNumber({
 }) {
     return (
         <tr>
-            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-border ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableNumInput value={value} onChange={raw => onChange(idx, raw)} />
@@ -1383,8 +1411,8 @@ function TableRowStatic({
 }) {
     return (
         <tr>
-            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-border ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableStaticValue value={value} />
@@ -1435,8 +1463,8 @@ function TableRowSelectNumber({
 }) {
     return (
         <tr>
-            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-border ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableSelectInput value={value} options={options} onChange={raw => onChange(idx, raw)} />
@@ -1459,8 +1487,8 @@ function TableRowText({
 }) {
     return (
         <tr>
-            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-border ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableTextInput value={value} onChange={raw => onChange(idx, raw)} />
@@ -1483,8 +1511,8 @@ function TableRowComputed({
 }) {
     return (
         <tr>
-            <td className="px-3 py-2 border-b border-r border-border">{label}</td>
-            <td className="px-2 py-2 border-b border-r border-border text-center">{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-border ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-border text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
                 <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-border last:border-r-0">
                     <TableComputedValue value={value} highlight={highlight} />
