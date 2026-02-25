@@ -355,31 +355,28 @@ const computePoint = (point: ProctorPunto): PointComputed => {
 
 const computeSievePreview = (form: ProctorPayload) => {
     const mass = [...form.tamiz_masa_retenida_g]
-    const pct = [...form.tamiz_porcentaje_retenido]
-    const acc = [...form.tamiz_porcentaje_retenido_acumulado]
-
-    if (mass[4] == null && mass.slice(0, 4).every(v => v != null)) {
-        mass[4] = Number((mass.slice(0, 4).reduce<number>((sum, value) => sum + (value ?? 0), 0)).toFixed(2))
-    }
+    const pct = Array.from({ length: mass.length }, () => null as number | null)
+    const acc = Array.from({ length: mass.length }, () => null as number | null)
 
     const totalIndex = mass.length - 1
+    const hasAllMassRows = mass.slice(0, totalIndex).every(v => v != null)
+    mass[totalIndex] = hasAllMassRows
+        ? Number((mass.slice(0, totalIndex).reduce<number>((sum, value) => sum + (value ?? 0), 0)).toFixed(2))
+        : null
+
     const total = mass[totalIndex] && mass[totalIndex] !== 0 ? mass[totalIndex] : null
-    if (total) {
+    if (total != null) {
         let running = 0
         for (let idx = 0; idx < totalIndex; idx += 1) {
-            if (pct[idx] == null && mass[idx] != null) {
-                pct[idx] = Number((((mass[idx] || 0) / total) * 100).toFixed(2))
-            }
-            if (pct[idx] != null) {
-                running += pct[idx] || 0
-                if (acc[idx] == null) {
-                    acc[idx] = Number(running.toFixed(2))
-                }
-            }
+            const value = mass[idx]
+            if (value == null) continue
+            const currentPct = Number(((value / total) * 100).toFixed(2))
+            pct[idx] = currentPct
+            running = Number((running + currentPct).toFixed(2))
+            acc[idx] = running
         }
-
-        if (pct[totalIndex] == null) pct[totalIndex] = 100
-        if (acc[totalIndex] == null) acc[totalIndex] = 100
+        pct[totalIndex] = running
+        acc[totalIndex] = running
     }
 
     return { mass, pct, acc }
