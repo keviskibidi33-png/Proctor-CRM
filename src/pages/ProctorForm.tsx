@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { ChevronDown, Download, Loader2, FlaskConical, Beaker, Trash2 } from 'lucide-react'
@@ -36,8 +36,9 @@ const STICKY_DESC_WIDTH_CLASS = "w-[320px] min-w-[320px] max-w-[320px]"
 const STICKY_UNIT_WIDTH_CLASS = "w-[80px] min-w-[80px] max-w-[80px]"
 const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-muted/40 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.45)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border"
 const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-background relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.35)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-border"
-const STICKY_UNIT_TH_CLASS = "sticky left-[320px] z-30 bg-muted/40 relative"
-const STICKY_UNIT_TD_CLASS = "sticky left-[320px] z-20 bg-background relative"
+const STICKY_UNIT_TH_CLASS = "bg-muted/40"
+const STICKY_UNIT_TD_CLASS = "bg-background"
+const ENTER_NAV_SELECTOR = '[data-enter-nav="true"]:not([disabled])'
 
 interface ProctorDraftSnapshot {
     version: number
@@ -49,6 +50,35 @@ const getDraftStorageKey = (ensayoId: number | null) =>
     `${PROCTOR_DRAFT_STORAGE_PREFIX}:${ensayoId ?? 'new'}`
 
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
+
+const getEnterNavigableFields = (): HTMLElement[] => {
+    if (typeof document === 'undefined') return []
+    return Array.from(document.querySelectorAll<HTMLElement>(ENTER_NAV_SELECTOR)).filter((field) => {
+        if (field.tabIndex < 0) return false
+        return field.getClientRects().length > 0
+    })
+}
+
+const handleAdvanceOnEnter = (event: KeyboardEvent<HTMLElement>): void => {
+    if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return
+
+    const current = event.currentTarget
+    if (current instanceof HTMLTextAreaElement) return
+
+    const fields = getEnterNavigableFields()
+    const currentIndex = fields.indexOf(current)
+    if (currentIndex < 0) return
+
+    const next = fields[currentIndex + 1]
+    if (!next) return
+
+    event.preventDefault()
+    next.focus()
+
+    if (next instanceof HTMLInputElement && next.type !== 'checkbox' && next.type !== 'radio') {
+        next.select()
+    }
+}
 
 const normalizeNumeroOtCode = (raw: string): string => {
     const value = raw.trim().toUpperCase()
@@ -1281,9 +1311,11 @@ function Input({ label, value, onChange, placeholder, onBlur }: {
                 value={value}
                 onChange={e => onChange(e.target.value)}
                 onBlur={onBlur}
+                onKeyDown={handleAdvanceOnEnter}
                 placeholder={placeholder}
                 autoComplete="off"
                 data-lpignore="true"
+                data-enter-nav="true"
                 className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
         </div>
@@ -1303,8 +1335,10 @@ function NumberInput({ label, value, onChange }: {
                 step="any"
                 value={value ?? ''}
                 onChange={e => onChange(e.target.value)}
+                onKeyDown={handleAdvanceOnEnter}
                 autoComplete="off"
                 data-lpignore="true"
+                data-enter-nav="true"
                 className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
         </div>
@@ -1324,6 +1358,8 @@ function SelectField({ label, value, options, onChange }: {
                 <select
                     value={value}
                     onChange={e => onChange(e.target.value)}
+                    onKeyDown={handleAdvanceOnEnter}
+                    data-enter-nav="true"
                     className="w-full h-9 pl-3 pr-8 rounded-md border border-input bg-background text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                     {options.map(option => (
@@ -1346,8 +1382,10 @@ function TableNumInput({ value, onChange }: {
             step="any"
             value={value ?? ''}
             onChange={e => onChange(e.target.value)}
+            onKeyDown={handleAdvanceOnEnter}
             autoComplete="off"
             data-lpignore="true"
+            data-enter-nav="true"
             className="w-full h-8 px-2 rounded-md border border-input bg-background text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring"
         />
     )
@@ -1362,8 +1400,10 @@ function TableTextInput({ value, onChange }: {
             type="text"
             value={value}
             onChange={e => onChange(e.target.value)}
+            onKeyDown={handleAdvanceOnEnter}
             autoComplete="off"
             data-lpignore="true"
+            data-enter-nav="true"
             className="w-full h-8 px-2 rounded-md border border-input bg-background text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring"
         />
     )
@@ -1451,6 +1491,8 @@ function TableSelectInput({
             <select
                 value={currentValue}
                 onChange={e => onChange(e.target.value)}
+                onKeyDown={handleAdvanceOnEnter}
+                data-enter-nav="true"
                 className="w-full h-8 pl-2 pr-7 rounded-md border border-input bg-background text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-ring"
             >
                 {options.map(option => (
