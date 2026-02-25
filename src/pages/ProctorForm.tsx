@@ -512,13 +512,20 @@ export default function ProctorForm() {
             (form.clasificacion_sucs_visual || '').trim(),
         )
 
-        const condicionesReady = Boolean(
-            form.metodo_ensayo !== '-' &&
-            form.metodo_preparacion !== '-' &&
-            form.tipo_apisonador !== '-' &&
-            form.excluyo_material_muestra !== '-' &&
+        const condicionesBaseChecklist = [
+            form.metodo_ensayo !== '-',
+            form.metodo_preparacion !== '-',
+            form.tipo_apisonador !== '-',
+            form.excluyo_material_muestra !== '-',
             form.contenido_humedad_natural_pct != null,
-        )
+        ]
+        const requiereDetalleExclusion = form.excluyo_material_muestra === 'SI'
+        const detalleExclusionListo = !requiereDetalleExclusion || Boolean((form.observaciones || '').trim())
+        const condicionesCompleted =
+            condicionesBaseChecklist.filter(Boolean).length +
+            (requiereDetalleExclusion && detalleExclusionListo ? 1 : 0)
+        const condicionesTotal = condicionesBaseChecklist.length + (requiereDetalleExclusion ? 1 : 0)
+        const condicionesReady = condicionesBaseChecklist.every(Boolean) && detalleExclusionListo
 
         const puntosCompletos = computedPoints.filter((point, idx) => {
             const row = form.puntos[idx]
@@ -553,7 +560,7 @@ export default function ProctorForm() {
         const sections = [
             { label: 'Encabezado', ready: headerReady },
             { label: 'Descripcion', ready: descripcionReady },
-            { label: 'Condiciones', ready: condicionesReady },
+            { label: 'Condiciones', ready: condicionesReady, detail: `${condicionesCompleted}/${condicionesTotal}` },
             { label: 'Puntos completos', ready: puntosCompletos >= 4, detail: `${puntosCompletos}/5` },
             { label: 'Tamices', ready: tamicesReady },
             { label: 'Equipos', ready: equiposReady },
@@ -755,6 +762,10 @@ export default function ProctorForm() {
             toast.error('Complete los campos obligatorios: Muestra, N OT y Realizado por')
             return
         }
+        if (form.excluyo_material_muestra === 'SI' && !(form.observaciones || '').trim()) {
+            toast.error('Si marco SI en exclusion de material, detallelo en Observaciones.')
+            return
+        }
 
         setLoading(true)
         try {
@@ -787,7 +798,7 @@ export default function ProctorForm() {
         } finally {
             setLoading(false)
         }
-    }, [buildPayload, closeParentModalIfEmbedded, downloadBlob, draftStorageKey, editingEnsayoId, form.muestra, form.numero_ot, form.realizado_por])
+    }, [buildPayload, closeParentModalIfEmbedded, downloadBlob, draftStorageKey, editingEnsayoId, form.excluyo_material_muestra, form.muestra, form.numero_ot, form.observaciones, form.realizado_por])
 
     return (
         <div className="max-w-[1780px] mx-auto p-4 md:p-6">
@@ -896,13 +907,16 @@ export default function ProctorForm() {
 
                             <div className="rounded-md border border-border p-3 space-y-3">
                                 <h3 className="text-sm font-semibold text-foreground">Condiciones del ensayo</h3>
-                                <SelectField label="Metodo de ensayo" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
-                                <SelectField label="Metodo de preparacion" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
-                                <SelectField label="Tipo de apisonador" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
-                                <NumberInput label="Contenido de humedad natural (%)" value={form.contenido_humedad_natural_pct} onChange={v => setNum('contenido_humedad_natural_pct', v)} />
-                                <SelectField label="Se excluyo algun material de la muestra" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
+                                <p className="text-xs text-muted-foreground">
+                                    Complete el texto y marque cada condicion. Si marca <span className="font-semibold">SI</span> en exclusion de material, debe detallar en observaciones.
+                                </p>
+                                <SelectField label="- Metodo de ensayo" value={form.metodo_ensayo} options={METODO_ENSAYO_OPTIONS} onChange={v => set('metodo_ensayo', v as ProctorPayload['metodo_ensayo'])} />
+                                <SelectField label="- Metodo de preparacion de la muestra" value={form.metodo_preparacion} options={METODO_PREPARACION_OPTIONS} onChange={v => set('metodo_preparacion', v as ProctorPayload['metodo_preparacion'])} />
+                                <SelectField label="- Tipo de apisonador" value={form.tipo_apisonador} options={APISONADOR_OPTIONS} onChange={v => set('tipo_apisonador', v as ProctorPayload['tipo_apisonador'])} />
+                                <NumberInput label="- Contenido de humedad natural (%)" value={form.contenido_humedad_natural_pct} onChange={v => setNum('contenido_humedad_natural_pct', v)} />
+                                <SelectField label="- Se excluyo algun material de la muestra de prueba" value={form.excluyo_material_muestra} options={SI_NO_OPTIONS} onChange={v => set('excluyo_material_muestra', v as ProctorPayload['excluyo_material_muestra'])} />
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones</label>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones / detalle de material excluido</label>
                                     <textarea
                                         value={form.observaciones || ''}
                                         onChange={e => set('observaciones', e.target.value)}
@@ -910,6 +924,9 @@ export default function ProctorForm() {
                                         className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                                         placeholder="Observaciones del ensayo..."
                                     />
+                                    {form.excluyo_material_muestra === 'SI' && !(form.observaciones || '').trim() ? (
+                                        <p className="mt-1 text-xs text-rose-600">Pendiente: detalle el material excluido para resolver Condiciones.</p>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
