@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef, type KeyboardEvent } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { ChevronDown, Download, Loader2, FlaskConical, Beaker, Trash2 } from 'lucide-react'
@@ -59,7 +59,7 @@ const getEnterNavigableFields = (): HTMLElement[] => {
     })
 }
 
-const handleAdvanceOnEnter = (event: KeyboardEvent<HTMLElement>): void => {
+const handleAdvanceOnEnter = (event: ReactKeyboardEvent<HTMLElement>): void => {
     if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return
 
     const current = event.currentTarget
@@ -278,7 +278,7 @@ const getComparableProctorFormState = (form: ProctorPayload): ProctorPayload => 
         fecha_ensayo: normalizeTextValue(hydrated.fecha_ensayo),
         realizado_por: normalizeTextValue(hydrated.realizado_por),
         tipo_muestra: normalizeTextValue(hydrated.tipo_muestra),
-        condicion_muestra: normalizeTextValue(hydrated.condicion_muestra),
+        condicion_muestra: normalizeSelect(hydrated.condicion_muestra, CONDICION_MUESTRA_OPTIONS, '-'),
         tamano_maximo_particula_in: normalizeTextValue(hydrated.tamano_maximo_particula_in),
         forma_particula: normalizeTextValue(hydrated.forma_particula),
         clasificacion_sucs_visual: normalizeTextValue(hydrated.clasificacion_sucs_visual),
