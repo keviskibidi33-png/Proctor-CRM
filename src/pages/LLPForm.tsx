@@ -14,12 +14,11 @@ const HERRAMIENTA = ['-', 'METAL', 'PLASTICO'] as const
 const DISPOSITIVO = ['-', 'MANUAL', 'MECANICO'] as const
 const LAMINACION = ['-', 'MANUAL', 'DISPOSITIVO DE LAMINACION'] as const
 const PREPARACION = ['-', 'HUMEDO', 'SECADO AL AIRE', 'SECADO AL HORNO'] as const
-const ELIMINACION_PARTICULAS = [
-    '-',
-    'LAVADO POR EL TAMIZ NO. 40',
-    'TAMIZADO EN SECO POR EL TAMIZ NO. 40',
-    'MECANICAMENTE EMPUJADO A TRAVES DEL TAMIZ NO. 40',
-    'MEZCLADO EN PLACA DE VIDRIO Y ELIMINACION DE PARTICULAS DE ARENA MEDIANAS',
+const ELIMINACION_PARTICULAS_OPTIONS = [
+    { value: 'LAVADO POR EL TAMIZ NO. 40', label: 'Lavado por el tamiz No. 40' },
+    { value: 'MECANICAMENTE EMPUJADO A TRAVES DEL TAMIZ NO. 40', label: 'Mecánicamente empujado a través del tamiz No. 40' },
+    { value: 'TAMIZADO EN SECO POR EL TAMIZ NO. 40', label: 'Tamizado en seco por el tamiz No. 40' },
+    { value: 'MEZCLADO EN PLACA DE VIDRIO Y ELIMINACION DE PARTICULAS DE ARENA MEDIANAS', label: 'Mezclado en placa de vidrio y eliminación de partículas de arena medianas' },
 ] as const
 const CONDICION = ['-', 'ALTERADO', 'INTACTO'] as const
 const EQ_BALANZA = ['-', 'EQP-0045'] as const
@@ -278,23 +277,187 @@ export default function LLPForm() {
                         <div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg">
                             <h2 className="text-sm font-semibold text-foreground">Condiciones del ensayo</h2>
                         </div>
-                        <div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                            <div className="space-y-3">
-                                {renderSelect('Método ensayo LL', form.metodo_ensayo_limite_liquido, METODO_LIQUIDO, v => setField('metodo_ensayo_limite_liquido', v as LLPPayload['metodo_ensayo_limite_liquido']))}
-                                {renderSelect('Herramienta ranurado', form.herramienta_ranurado_limite_liquido, HERRAMIENTA, v => setField('herramienta_ranurado_limite_liquido', v as LLPPayload['herramienta_ranurado_limite_liquido']))}
-                                {renderSelect('Dispositivo LL', form.dispositivo_limite_liquido, DISPOSITIVO, v => setField('dispositivo_limite_liquido', v as LLPPayload['dispositivo_limite_liquido']))}
-                                {renderSelect('Método laminación LP', form.metodo_laminacion_limite_plastico, LAMINACION, v => setField('metodo_laminacion_limite_plastico', v as LLPPayload['metodo_laminacion_limite_plastico']))}
-                            </div>
-                            <div className="space-y-3">
-                                {renderNum('Contenido humedad inicial (%)', form.contenido_humedad_muestra_inicial_pct, v => setField('contenido_humedad_muestra_inicial_pct', parseNum(v)))}
-                                {renderText('Proceso selección muestra', form.proceso_seleccion_muestra || '', v => setField('proceso_seleccion_muestra', v))}
-                                {renderSelect('Preparación muestra', form.metodo_preparacion_muestra, PREPARACION, v => setField('metodo_preparacion_muestra', v as LLPPayload['metodo_preparacion_muestra']))}
-                                {renderSelect(
-                                    'Método eliminación partículas > tamiz No. 40',
-                                    form.metodo_eliminacion_particulas_tamiz_40,
-                                    ELIMINACION_PARTICULAS,
-                                    v => setField('metodo_eliminacion_particulas_tamiz_40', v as LLPPayload['metodo_eliminacion_particulas_tamiz_40']),
-                                )}
+                        <div className="p-4 overflow-x-auto">
+                            <table className="w-full min-w-[980px] text-sm border border-border">
+                                <tbody>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Método de ensayo en el Límite Líquido</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <select
+                                                value={form.metodo_ensayo_limite_liquido}
+                                                onChange={e => setField('metodo_ensayo_limite_liquido', e.target.value as LLPPayload['metodo_ensayo_limite_liquido'])}
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                {METODO_LIQUIDO.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Herramienta de ranurado para el límite líquido</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <select
+                                                value={form.herramienta_ranurado_limite_liquido}
+                                                onChange={e => setField('herramienta_ranurado_limite_liquido', e.target.value as LLPPayload['herramienta_ranurado_limite_liquido'])}
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                {HERRAMIENTA.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Dispositivo para el límite líquido</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <select
+                                                value={form.dispositivo_limite_liquido}
+                                                onChange={e => setField('dispositivo_limite_liquido', e.target.value as LLPPayload['dispositivo_limite_liquido'])}
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                {DISPOSITIVO.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Método de laminación para el Límite Plástico</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <select
+                                                value={form.metodo_laminacion_limite_plastico}
+                                                onChange={e => setField('metodo_laminacion_limite_plastico', e.target.value as LLPPayload['metodo_laminacion_limite_plastico'])}
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                {LAMINACION.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Contenido de humedad de muestra inicial (%)</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={form.contenido_humedad_muestra_inicial_pct ?? ''}
+                                                onChange={e => setField('contenido_humedad_muestra_inicial_pct', parseNum(e.target.value))}
+                                                autoComplete="off"
+                                                data-lpignore="true"
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Proceso de selección en caso de muestras Intacta, se retiró lentes de arena</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <input
+                                                type="text"
+                                                value={form.proceso_seleccion_muestra || ''}
+                                                onChange={e => setField('proceso_seleccion_muestra', e.target.value)}
+                                                autoComplete="off"
+                                                data-lpignore="true"
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-r border-border">Método de preparación de la muestra de ensayo</td>
+                                        <td className="px-3 py-2 border-b border-border">
+                                            <select
+                                                value={form.metodo_preparacion_muestra}
+                                                onChange={e => setField('metodo_preparacion_muestra', e.target.value as LLPPayload['metodo_preparacion_muestra'])}
+                                                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                            >
+                                                {PREPARACION.map(option => <option key={option} value={option}>{option}</option>)}
+                                            </select>
+                                            <p className="mt-1 text-[11px] text-muted-foreground">Opciones válidas: HUMEDO, SECADO AL AIRE, SECADO AL HORNO.</p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="px-3 py-2 border-b border-border text-center font-medium" colSpan={2}>Método de eliminación de partículas más grandes que el tamiz No. 40</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-0 border-b border-r border-border">
+                                            <div className="grid grid-cols-[34px_minmax(0,1fr)]">
+                                                <button
+                                                    type="button"
+                                                    className="h-12 border-r border-border text-center font-semibold hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[0].value)}
+                                                >
+                                                    {form.metodo_eliminacion_particulas_tamiz_40 === ELIMINACION_PARTICULAS_OPTIONS[0].value ? 'X' : ''}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-12 px-2 text-left hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[0].value)}
+                                                >
+                                                    {ELIMINACION_PARTICULAS_OPTIONS[0].label}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="p-0 border-b border-border">
+                                            <div className="grid grid-cols-[34px_minmax(0,1fr)]">
+                                                <button
+                                                    type="button"
+                                                    className="h-12 border-r border-border text-center font-semibold hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[1].value)}
+                                                >
+                                                    {form.metodo_eliminacion_particulas_tamiz_40 === ELIMINACION_PARTICULAS_OPTIONS[1].value ? 'X' : ''}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-12 px-2 text-left hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[1].value)}
+                                                >
+                                                    {ELIMINACION_PARTICULAS_OPTIONS[1].label}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td className="p-0 border-r border-border">
+                                            <div className="grid grid-cols-[34px_minmax(0,1fr)]">
+                                                <button
+                                                    type="button"
+                                                    className="h-12 border-r border-border text-center font-semibold hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[2].value)}
+                                                >
+                                                    {form.metodo_eliminacion_particulas_tamiz_40 === ELIMINACION_PARTICULAS_OPTIONS[2].value ? 'X' : ''}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-12 px-2 text-left hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[2].value)}
+                                                >
+                                                    {ELIMINACION_PARTICULAS_OPTIONS[2].label}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="p-0">
+                                            <div className="grid grid-cols-[34px_minmax(0,1fr)]">
+                                                <button
+                                                    type="button"
+                                                    className="h-12 border-r border-border text-center font-semibold hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[3].value)}
+                                                >
+                                                    {form.metodo_eliminacion_particulas_tamiz_40 === ELIMINACION_PARTICULAS_OPTIONS[3].value ? 'X' : ''}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="h-12 px-2 text-left hover:bg-muted/30"
+                                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', ELIMINACION_PARTICULAS_OPTIONS[3].value)}
+                                                >
+                                                    {ELIMINACION_PARTICULAS_OPTIONS[3].label}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div className="mt-2 text-right">
+                                <button
+                                    type="button"
+                                    className="h-8 px-3 rounded-md border border-input bg-background text-xs hover:bg-muted/60"
+                                    onClick={() => setField('metodo_eliminacion_particulas_tamiz_40', '-')}
+                                >
+                                    Limpiar selección de método de eliminación
+                                </button>
                             </div>
                         </div>
                     </div>
