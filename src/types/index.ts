@@ -113,6 +113,12 @@ export interface LLPPayload {
     contenido_humedad_muestra_inicial_pct?: number | null
     proceso_seleccion_muestra?: string | null
     metodo_preparacion_muestra: "-" | "HUMEDO" | "SECADO AL AIRE" | "SECADO AL HORNO"
+    metodo_eliminacion_particulas_tamiz_40:
+        | "-"
+        | "LAVADO POR EL TAMIZ NO. 40"
+        | "TAMIZADO EN SECO POR EL TAMIZ NO. 40"
+        | "MECANICAMENTE EMPUJADO A TRAVES DEL TAMIZ NO. 40"
+        | "MEZCLADO EN PLACA DE VIDRIO Y ELIMINACION DE PARTICULAS DE ARENA MEDIANAS"
 
     tipo_muestra?: string | null
     condicion_muestra: "-" | "ALTERADO" | "INTACTO"
