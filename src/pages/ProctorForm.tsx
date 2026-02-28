@@ -34,8 +34,8 @@ const PROCTOR_DRAFT_STORAGE_PREFIX = 'proctor_form_draft_v1'
 const AUTOSAVE_DEBOUNCE_MS = 700
 const STICKY_DESC_WIDTH_CLASS = "w-[320px] min-w-[320px] max-w-[320px]"
 const STICKY_UNIT_WIDTH_CLASS = "w-[80px] min-w-[80px] max-w-[80px]"
-const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-slate-200 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.18)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-500"
-const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-slate-50 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.12)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-400"
+const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-slate-200 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.18)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-300"
+const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-slate-50 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.12)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-200"
 const STICKY_UNIT_TH_CLASS = "bg-slate-200 text-slate-800"
 const STICKY_UNIT_TD_CLASS = "bg-slate-50 text-slate-800"
 const ENTER_NAV_SELECTOR = '[data-enter-nav="true"]:not([disabled])'
@@ -765,14 +765,14 @@ export default function ProctorForm() {
                 </Section>
 
                 <Section title="Densidad humeda">
-                    <div className="overflow-x-auto rounded-md border border-slate-400 bg-slate-50 relative">
+                    <div className="overflow-x-auto rounded-md border border-slate-300 bg-slate-50 relative">
                         <table className="w-full min-w-[1180px] table-fixed text-sm">
                             <thead className="bg-slate-200">
                                 <tr className="text-xs font-semibold text-slate-700">
-                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-400 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
-                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-400 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
+                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-300 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
+                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((_, idx) => (
-                                        <th key={`densidad-humeda-head-${idx}`} className="w-36 px-2 py-2 border-b border-r border-slate-400 text-center last:border-r-0">{idx + 1}</th>
+                                        <th key={`densidad-humeda-head-${idx}`} className="w-36 px-2 py-2 border-b border-r border-slate-300 text-center last:border-r-0">{idx + 1}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -796,14 +796,14 @@ export default function ProctorForm() {
                 </Section>
 
                 <Section title="Contenido humedad - Densidad seca">
-                    <div className="overflow-x-auto rounded-md border border-slate-400 bg-slate-50 relative">
+                    <div className="overflow-x-auto rounded-md border border-slate-300 bg-slate-50 relative">
                         <table className="w-full min-w-[1180px] table-fixed text-sm">
                             <thead className="bg-slate-200">
                                 <tr className="text-xs font-semibold text-slate-700">
-                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-400 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
-                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-400 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
+                                    <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-300 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
+                                    <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((label) => (
-                                        <th key={label} className="w-36 px-2 py-2 border-b border-r border-slate-400 text-center last:border-r-0">{label}</th>
+                                        <th key={label} className="w-36 px-2 py-2 border-b border-r border-slate-300 text-center last:border-r-0">{label}</th>
                                     ))}
                                 </tr>
                             </thead>
@@ -865,31 +865,31 @@ export default function ProctorForm() {
                         </div>
 
                         <div>
-                            <div className="overflow-hidden rounded-md border border-slate-400 bg-slate-50">
+                            <div className="overflow-hidden rounded-md border border-slate-300 bg-slate-50">
                                 <table className="w-full text-sm">
                                     <thead className="bg-slate-200 text-xs font-semibold text-slate-700">
                                         <tr>
-                                            <th className="px-3 py-2 border-b border-r border-slate-400 text-left">Designacion de tamices</th>
-                                            <th className="px-3 py-2 border-b border-r border-slate-400 text-center">Masa retenida (g)</th>
-                                            <th className="px-3 py-2 border-b border-r border-slate-400 text-center">% retenido</th>
-                                            <th className="px-3 py-2 border-b border-slate-400 text-center">% retenido acumulado</th>
+                                            <th className="px-3 py-2 border-b border-r border-slate-300 text-left">Designacion de tamices</th>
+                                            <th className="px-3 py-2 border-b border-r border-slate-300 text-center">Masa retenida (g)</th>
+                                            <th className="px-3 py-2 border-b border-r border-slate-300 text-center">% retenido</th>
+                                            <th className="px-3 py-2 border-b border-slate-300 text-center">% retenido acumulado</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {SIEVE_LABELS.map((label, idx) => (
                                             <tr key={label}>
-                                                <td className="px-3 py-2 border-b border-r border-slate-300">{label}</td>
-                                                <td className="px-2 py-2 border-b border-r border-slate-300">
+                                                <td className="px-3 py-2 border-b border-r border-slate-200">{label}</td>
+                                                <td className="px-2 py-2 border-b border-r border-slate-200">
                                                     {idx < 4 ? (
                                                         <TableNumInput value={form.tamiz_masa_retenida_g[idx]} onChange={raw => setSieveValue('tamiz_masa_retenida_g', idx, raw)} />
                                                     ) : (
                                                         <TableComputedValue value={sievePreview.mass[idx] ?? null} />
                                                     )}
                                                 </td>
-                                                <td className="px-2 py-2 border-b border-r border-slate-300">
+                                                <td className="px-2 py-2 border-b border-r border-slate-200">
                                                     <TableComputedValue value={sievePreview.pct[idx] ?? null} />
                                                 </td>
-                                                <td className="px-2 py-2 border-b border-slate-300">
+                                                <td className="px-2 py-2 border-b border-slate-200">
                                                     <TableComputedValue value={sievePreview.acc[idx] ?? null} />
                                                 </td>
                                             </tr>
@@ -1150,7 +1150,7 @@ function TableNumInput({ value, onChange }: {
             autoComplete="off"
             data-lpignore="true"
             data-enter-nav="true"
-            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+            className="w-full h-8 px-2 rounded-md border border-slate-300 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400/60"
         />
     )
 }
@@ -1168,7 +1168,7 @@ function TableTextInput({ value, onChange }: {
             autoComplete="off"
             data-lpignore="true"
             data-enter-nav="true"
-            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+            className="w-full h-8 px-2 rounded-md border border-slate-300 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-400/60"
         />
     )
 }
@@ -1178,7 +1178,7 @@ function TableComputedValue({ value, highlight = false }: {
     highlight?: boolean
 }) {
     return (
-        <div className={`h-8 px-2 rounded-md border text-sm flex items-center justify-center ${highlight && value != null ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-slate-400 bg-slate-100 text-slate-800'}`}>
+        <div className={`h-8 px-2 rounded-md border text-sm flex items-center justify-center ${highlight && value != null ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-slate-300 bg-slate-100 text-slate-800'}`}>
             {value != null ? value : '-'}
         </div>
     )
@@ -1188,7 +1188,7 @@ function TableStaticValue({ value }: {
     value: string | number
 }) {
     return (
-        <div className="h-8 px-2 rounded-md border border-slate-400 bg-slate-100 text-sm text-slate-800 flex items-center justify-center">
+        <div className="h-8 px-2 rounded-md border border-slate-300 bg-slate-100 text-sm text-slate-800 flex items-center justify-center">
             {value}
         </div>
     )
@@ -1207,10 +1207,10 @@ function TableRowNumber({
 }) {
     return (
         <tr>
-            <td className={`px-3 py-2 border-b border-r border-slate-300 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
-            <td className={`px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-slate-200 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-slate-200 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
-                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-300 last:border-r-0">
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-200 last:border-r-0">
                     <TableNumInput value={value} onChange={raw => onChange(idx, raw)} />
                 </td>
             ))}
@@ -1229,10 +1229,10 @@ function TableRowStatic({
 }) {
     return (
         <tr>
-            <td className={`px-3 py-2 border-b border-r border-slate-300 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
-            <td className={`px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-slate-200 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-slate-200 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
-                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-300 last:border-r-0">
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-200 last:border-r-0">
                     <TableStaticValue value={value} />
                 </td>
             ))}
@@ -1257,7 +1257,7 @@ function TableSelectInput({
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={handleAdvanceOnEnter}
                 data-enter-nav="true"
-                className="w-full h-8 pl-2 pr-7 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+                className="w-full h-8 pl-2 pr-7 rounded-md border border-slate-300 bg-slate-50 text-slate-800 text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-slate-400/60"
             >
                 {options.map(option => (
                     <option key={option} value={option}>{option}</option>
@@ -1283,10 +1283,10 @@ function TableRowSelectNumber({
 }) {
     return (
         <tr>
-            <td className={`px-3 py-2 border-b border-r border-slate-300 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
-            <td className={`px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-slate-200 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-slate-200 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
-                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-300 last:border-r-0">
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-200 last:border-r-0">
                     <TableSelectInput value={value} options={options} onChange={raw => onChange(idx, raw)} />
                 </td>
             ))}
@@ -1307,10 +1307,10 @@ function TableRowText({
 }) {
     return (
         <tr>
-            <td className={`px-3 py-2 border-b border-r border-slate-300 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
-            <td className={`px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-slate-200 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-slate-200 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
-                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-300 last:border-r-0">
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-200 last:border-r-0">
                     <TableTextInput value={value} onChange={raw => onChange(idx, raw)} />
                 </td>
             ))}
@@ -1331,10 +1331,10 @@ function TableRowComputed({
 }) {
     return (
         <tr>
-            <td className={`px-3 py-2 border-b border-r border-slate-300 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
-            <td className={`px-2 py-2 border-b border-r border-slate-300 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
+            <td className={`px-3 py-2 border-b border-r border-slate-200 ${STICKY_DESC_WIDTH_CLASS} ${STICKY_DESC_TD_CLASS}`}>{label}</td>
+            <td className={`px-2 py-2 border-b border-r border-slate-200 text-center ${STICKY_UNIT_WIDTH_CLASS} ${STICKY_UNIT_TD_CLASS}`}>{unit}</td>
             {values.map((value, idx) => (
-                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-300 last:border-r-0">
+                <td key={`${label}-${idx}`} className="px-2 py-2 border-b border-r border-slate-200 last:border-r-0">
                     <TableComputedValue value={value} highlight={highlight} />
                 </td>
             ))}
