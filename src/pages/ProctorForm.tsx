@@ -34,10 +34,10 @@ const PROCTOR_DRAFT_STORAGE_PREFIX = 'proctor_form_draft_v1'
 const AUTOSAVE_DEBOUNCE_MS = 700
 const STICKY_DESC_WIDTH_CLASS = "w-[320px] min-w-[320px] max-w-[320px]"
 const STICKY_UNIT_WIDTH_CLASS = "w-[80px] min-w-[80px] max-w-[80px]"
-const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-slate-300 text-slate-900 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.45)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-500"
-const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-slate-100 text-slate-900 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.35)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-400"
-const STICKY_UNIT_TH_CLASS = "bg-slate-300 text-slate-900"
-const STICKY_UNIT_TD_CLASS = "bg-slate-100 text-slate-900"
+const STICKY_DESC_TH_CLASS = "sticky left-0 z-40 bg-slate-200 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.18)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-500"
+const STICKY_DESC_TD_CLASS = "sticky left-0 z-30 bg-slate-50 text-slate-800 relative shadow-[8px_0_12px_-10px_rgba(15,23,42,0.12)] after:content-[''] after:absolute after:top-0 after:right-0 after:h-full after:w-px after:bg-slate-400"
+const STICKY_UNIT_TH_CLASS = "bg-slate-200 text-slate-800"
+const STICKY_UNIT_TD_CLASS = "bg-slate-50 text-slate-800"
 const ENTER_NAV_SELECTOR = '[data-enter-nav="true"]:not([disabled])'
 
 interface ProctorDraftSnapshot {
@@ -204,7 +204,7 @@ const normalizePoint = (value: ProctorPunto | undefined, index: number): Proctor
     const merged = { ...emptyPoint(index), ...(value || {}) }
     return {
         ...merged,
-        prueba_numero: index + 1,
+        prueba_numero: toOptionalNumber(merged.prueba_numero) ?? index + 1,
         numero_capas: FIXED_NUMERO_CAPAS,
         numero_golpes: normalizeNumeroGolpes(merged.numero_golpes),
         masa_suelo_humedo_molde_a: toOptionalNumber(merged.masa_suelo_humedo_molde_a),
@@ -627,7 +627,7 @@ export default function ProctorForm() {
     const buildPayload = useCallback((): ProctorPayload => {
         const mergedPoints = form.puntos.map((point, idx) => ({
             ...point,
-            prueba_numero: idx + 1,
+            prueba_numero: toOptionalNumber(point.prueba_numero) ?? idx + 1,
             numero_capas: FIXED_NUMERO_CAPAS,
             numero_golpes: normalizeNumeroGolpes(point.numero_golpes),
             ...computedPoints[idx],
@@ -767,8 +767,8 @@ export default function ProctorForm() {
                 <Section title="Densidad humeda">
                     <div className="overflow-x-auto rounded-md border border-slate-400 bg-slate-50 relative">
                         <table className="w-full min-w-[1180px] table-fixed text-sm">
-                            <thead className="bg-slate-300">
-                                <tr className="text-xs font-semibold text-slate-800">
+                            <thead className="bg-slate-200">
+                                <tr className="text-xs font-semibold text-slate-700">
                                     <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-400 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
                                     <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-400 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((_, idx) => (
@@ -777,7 +777,12 @@ export default function ProctorForm() {
                                 </tr>
                             </thead>
                             <tbody>
-                                <TableRowStatic label="Prueba N" unit="--" values={POINT_COLUMNS.map((_, idx) => idx + 1)} />
+                                <TableRowNumber
+                                    label="Prueba N"
+                                    unit="--"
+                                    values={form.puntos.map(point => point.prueba_numero)}
+                                    onChange={(idx, raw) => setPointNumber(idx, 'prueba_numero', raw)}
+                                />
                                 <TableRowStatic label="Numero de capas" unit="--" values={POINT_COLUMNS.map(() => FIXED_NUMERO_CAPAS)} />
                                 <TableRowSelectNumber label="Numero de golpes" unit="--" values={form.puntos.map(point => point.numero_golpes)} options={GOLPES_OPTIONS} onChange={setPointGolpes} />
                                 <TableRowNumber label="Masa de suelo humedo y molde (A)" unit="g" values={form.puntos.map(point => point.masa_suelo_humedo_molde_a)} onChange={(idx, raw) => setPointNumber(idx, 'masa_suelo_humedo_molde_a', raw)} />
@@ -793,8 +798,8 @@ export default function ProctorForm() {
                 <Section title="Contenido humedad - Densidad seca">
                     <div className="overflow-x-auto rounded-md border border-slate-400 bg-slate-50 relative">
                         <table className="w-full min-w-[1180px] table-fixed text-sm">
-                            <thead className="bg-slate-300">
-                                <tr className="text-xs font-semibold text-slate-800">
+                            <thead className="bg-slate-200">
+                                <tr className="text-xs font-semibold text-slate-700">
                                     <th className={`${STICKY_DESC_WIDTH_CLASS} px-3 py-2 border-b border-r border-slate-400 text-left ${STICKY_DESC_TH_CLASS}`}>DESCRIPCION</th>
                                     <th className={`${STICKY_UNIT_WIDTH_CLASS} px-2 py-2 border-b border-r border-slate-400 text-center ${STICKY_UNIT_TH_CLASS}`}>UND</th>
                                     {POINT_COLUMNS.map((label) => (
@@ -862,7 +867,7 @@ export default function ProctorForm() {
                         <div>
                             <div className="overflow-hidden rounded-md border border-slate-400 bg-slate-50">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-slate-300 text-xs font-semibold text-slate-800">
+                                    <thead className="bg-slate-200 text-xs font-semibold text-slate-700">
                                         <tr>
                                             <th className="px-3 py-2 border-b border-r border-slate-400 text-left">Designacion de tamices</th>
                                             <th className="px-3 py-2 border-b border-r border-slate-400 text-center">Masa retenida (g)</th>
@@ -1145,7 +1150,7 @@ function TableNumInput({ value, onChange }: {
             autoComplete="off"
             data-lpignore="true"
             data-enter-nav="true"
-            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-100 text-slate-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
         />
     )
 }
@@ -1163,7 +1168,7 @@ function TableTextInput({ value, onChange }: {
             autoComplete="off"
             data-lpignore="true"
             data-enter-nav="true"
-            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-100 text-slate-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+            className="w-full h-8 px-2 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center focus:outline-none focus:ring-2 focus:ring-slate-500/70"
         />
     )
 }
@@ -1173,7 +1178,7 @@ function TableComputedValue({ value, highlight = false }: {
     highlight?: boolean
 }) {
     return (
-        <div className={`h-8 px-2 rounded-md border text-sm flex items-center justify-center ${highlight && value != null ? 'border-primary bg-primary/15 text-primary font-semibold' : 'border-slate-400 bg-slate-200 text-slate-900'}`}>
+        <div className={`h-8 px-2 rounded-md border text-sm flex items-center justify-center ${highlight && value != null ? 'border-primary bg-primary/10 text-primary font-semibold' : 'border-slate-400 bg-slate-100 text-slate-800'}`}>
             {value != null ? value : '-'}
         </div>
     )
@@ -1183,7 +1188,7 @@ function TableStaticValue({ value }: {
     value: string | number
 }) {
     return (
-        <div className="h-8 px-2 rounded-md border border-slate-400 bg-slate-200 text-sm text-slate-900 flex items-center justify-center">
+        <div className="h-8 px-2 rounded-md border border-slate-400 bg-slate-100 text-sm text-slate-800 flex items-center justify-center">
             {value}
         </div>
     )
@@ -1252,7 +1257,7 @@ function TableSelectInput({
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={handleAdvanceOnEnter}
                 data-enter-nav="true"
-                className="w-full h-8 pl-2 pr-7 rounded-md border border-slate-500 bg-slate-100 text-slate-900 text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-slate-500/70"
+                className="w-full h-8 pl-2 pr-7 rounded-md border border-slate-500 bg-slate-50 text-slate-800 text-sm text-center appearance-none focus:outline-none focus:ring-2 focus:ring-slate-500/70"
             >
                 {options.map(option => (
                     <option key={option} value={option}>{option}</option>
