@@ -18,7 +18,7 @@ const CONDICION = ['-', 'ALTERADO', 'INTACTO'] as const
 const EQ_BALANZA = ['-', 'EQP-0045'] as const
 const EQ_HORNO = ['-', 'EQP-0049'] as const
 const EQ_COPA = ['-', 'EQP-0048'] as const
-const EQ_RANURADOR = ['-', 'EQP-0107'] as const
+const EQ_RANURADOR = ['-', 'INS-0107'] as const
 const REVISADO = ['-', 'FABIAN LA ROSA'] as const
 const APROBADO = ['-', 'IRMA COAQUIRA'] as const
 
@@ -64,6 +64,13 @@ const parseNum = (v: unknown): number | null => {
     if (v === null || v === undefined || v === '') return null
     const n = Number(v)
     return Number.isFinite(n) ? n : null
+}
+
+const normalizeRanuradorCode = (raw: unknown): (typeof EQ_RANURADOR)[number] => {
+    const text = String(raw || '').trim().toUpperCase()
+    if (!text || text === '-') return '-'
+    if (text.includes('0107')) return 'INS-0107'
+    return text === 'INS-0107' ? 'INS-0107' : '-'
 }
 
 const getEnsayoId = (): number | null => {
@@ -120,7 +127,14 @@ export default function LLPForm() {
     useEffect(() => {
         const raw = localStorage.getItem(`${DRAFT_KEY}:${editingEnsayoId ?? 'new'}`)
         if (!raw) return
-        try { setForm({ ...initialState(), ...JSON.parse(raw) }) } catch { /* ignore */ }
+        try {
+            const parsed = JSON.parse(raw) as LLPPayload
+            setForm({
+                ...initialState(),
+                ...parsed,
+                ranurador_codigo: normalizeRanuradorCode(parsed.ranurador_codigo),
+            })
+        } catch { /* ignore */ }
     }, [editingEnsayoId])
 
     useEffect(() => {
@@ -137,7 +151,13 @@ export default function LLPForm() {
             setLoadingEdit(true)
             try {
                 const detail = await getLLPEnsayoDetail(editingEnsayoId)
-                if (!cancelled && detail.payload) setForm({ ...initialState(), ...detail.payload })
+                if (!cancelled && detail.payload) {
+                    setForm({
+                        ...initialState(),
+                        ...detail.payload,
+                        ranurador_codigo: normalizeRanuradorCode(detail.payload.ranurador_codigo),
+                    })
+                }
             } catch { toast.error('No se pudo cargar ensayo LLP para edición.') } finally {
                 if (!cancelled) setLoadingEdit(false)
             }
@@ -161,6 +181,7 @@ export default function LLPForm() {
         try {
             const payload: LLPPayload = {
                 ...form,
+                ranurador_codigo: normalizeRanuradorCode(form.ranurador_codigo),
                 puntos: form.puntos.map((p, idx) => ({ ...p, numero_golpes: idx < 3 ? parseNum(p.numero_golpes) : null })),
             }
             if (download) {
