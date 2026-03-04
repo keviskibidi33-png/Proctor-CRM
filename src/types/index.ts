@@ -45,6 +45,9 @@ export interface ProctorPayload {
     tamiz_porcentaje_retenido: Array<number | null>
     tamiz_porcentaje_retenido_acumulado: Array<number | null>
 
+    tamiz_metodo_a_codigo?: string | null
+    tamiz_metodo_b_codigo?: string | null
+    tamiz_metodo_c_codigo?: string | null
     tamiz_utilizado_metodo_codigo?: string | null
     balanza_1g_codigo?: string | null
     balanza_codigo?: string | null

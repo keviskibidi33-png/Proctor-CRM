@@ -19,9 +19,9 @@ const METODO_PREPARACION_OPTIONS: Array<'-' | 'HUMEDO' | 'SECO'> = ['-', 'HUMEDO
 const APISONADOR_OPTIONS: Array<'-' | 'MANUAL' | 'MECANICO'> = ['-', 'MANUAL', 'MECANICO']
 const SI_NO_OPTIONS: Array<'-' | 'SI' | 'NO'> = ['-', 'SI', 'NO']
 const GOLPES_OPTIONS: Array<'-' | '25' | '56'> = ['-', '25', '56']
-const TAMIZ_METODO_COMBINADO = 'INS-0050 (3/4in), INS-0053 (No 4), INS-0052 (3/8in)' as const
-const TAMIZ_METODO_OPTIONS = ['-', TAMIZ_METODO_COMBINADO] as const
-const TAMIZ_METODO_LEGACY_OPTIONS = ['INS-0050 (3/4in)', 'INS-0053 (No 4)', 'INS-0052 (3/8in)'] as const
+const TAMIZ_METODO_A_OPTIONS = ['-', 'INS-0053 (No 4)'] as const
+const TAMIZ_METODO_B_OPTIONS = ['-', 'INS-0052 (3/8in)'] as const
+const TAMIZ_METODO_C_OPTIONS = ['-', 'INS-0050 (3/4in)'] as const
 const BALANZA_1G_OPTIONS = ['-', 'EQP-0054'] as const
 const BALANZA_01G_OPTIONS = ['-', 'EQP-0046'] as const
 const HORNO_110_OPTIONS = ['-', 'EQP-0049'] as const
@@ -183,7 +183,10 @@ const buildInitialState = (): ProctorPayload => ({
     tamiz_masa_retenida_g: emptySieveArray(),
     tamiz_porcentaje_retenido: emptySieveArray(),
     tamiz_porcentaje_retenido_acumulado: emptySieveArray(),
-    tamiz_utilizado_metodo_codigo: '-',
+    tamiz_metodo_a_codigo: 'INS-0053 (No 4)',
+    tamiz_metodo_b_codigo: 'INS-0052 (3/8in)',
+    tamiz_metodo_c_codigo: 'INS-0050 (3/4in)',
+    tamiz_utilizado_metodo_codigo: 'INS-0050 (3/4in), INS-0053 (No 4), INS-0052 (3/8in)',
     balanza_1g_codigo: '-',
     balanza_codigo: '-',
     horno_110_codigo: '-',
@@ -231,21 +234,49 @@ const normalizeSelect = <T extends string>(raw: unknown, options: readonly T[], 
     return (match ?? fallback) as T
 }
 
-const normalizeTamizMetodoSelect = (raw: unknown): (typeof TAMIZ_METODO_OPTIONS)[number] => {
-    const text = String(raw || '').trim().toUpperCase()
-    if (!text || text === '-') return '-'
-    const currentMatch = TAMIZ_METODO_OPTIONS.find(option => option.toUpperCase() === text)
-    if (currentMatch) {
-        return currentMatch
+const DEFAULT_TAMIZ_METODO_A = 'INS-0053 (No 4)' as const
+const DEFAULT_TAMIZ_METODO_B = 'INS-0052 (3/8in)' as const
+const DEFAULT_TAMIZ_METODO_C = 'INS-0050 (3/4in)' as const
+
+const inferTamizCodesFromLegacy = (raw: unknown): {
+    a: (typeof TAMIZ_METODO_A_OPTIONS)[number]
+    b: (typeof TAMIZ_METODO_B_OPTIONS)[number]
+    c: (typeof TAMIZ_METODO_C_OPTIONS)[number]
+} => {
+    const text = String(raw || '').toUpperCase()
+    if (!text.trim() || text.trim() === '-') {
+        return {
+            a: DEFAULT_TAMIZ_METODO_A,
+            b: DEFAULT_TAMIZ_METODO_B,
+            c: DEFAULT_TAMIZ_METODO_C,
+        }
     }
-    if (TAMIZ_METODO_LEGACY_OPTIONS.some(option => option.toUpperCase() === text)) {
-        return TAMIZ_METODO_COMBINADO
+
+    return {
+        a: text.includes('INS-0053') ? DEFAULT_TAMIZ_METODO_A : '-',
+        b: text.includes('INS-0052') ? DEFAULT_TAMIZ_METODO_B : '-',
+        c: text.includes('INS-0050') ? DEFAULT_TAMIZ_METODO_C : '-',
     }
-    return '-'
+}
+
+const composeTamizMetodoCodigo = (
+    tamizMetodoA: string | null | undefined,
+    tamizMetodoB: string | null | undefined,
+    tamizMetodoC: string | null | undefined,
+): string => {
+    const parts = [tamizMetodoC, tamizMetodoA, tamizMetodoB]
+        .map(value => String(value || '').trim())
+        .filter(value => value && value !== '-')
+    return parts.length ? parts.join(', ') : '-'
 }
 
 const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPayload => {
     const merged = { ...buildInitialState(), ...(candidate || {}) }
+    const inferredTamiz = inferTamizCodesFromLegacy(merged.tamiz_utilizado_metodo_codigo)
+    const tamizMetodoA = normalizeSelect(merged.tamiz_metodo_a_codigo, TAMIZ_METODO_A_OPTIONS, inferredTamiz.a)
+    const tamizMetodoB = normalizeSelect(merged.tamiz_metodo_b_codigo, TAMIZ_METODO_B_OPTIONS, inferredTamiz.b)
+    const tamizMetodoC = normalizeSelect(merged.tamiz_metodo_c_codigo, TAMIZ_METODO_C_OPTIONS, inferredTamiz.c)
+
     return {
         ...merged,
         puntos: Array.from({ length: 5 }, (_, idx) => normalizePoint(merged.puntos?.[idx], idx)),
@@ -258,7 +289,10 @@ const hydrateProctorFormState = (candidate: Partial<ProctorPayload>): ProctorPay
         tipo_apisonador: normalizeSelect(merged.tipo_apisonador, APISONADOR_OPTIONS, '-'),
         excluyo_material_muestra: normalizeSelect(merged.excluyo_material_muestra, SI_NO_OPTIONS, '-'),
         contenido_humedad_natural_pct: toOptionalNumber(merged.contenido_humedad_natural_pct),
-        tamiz_utilizado_metodo_codigo: normalizeTamizMetodoSelect(merged.tamiz_utilizado_metodo_codigo),
+        tamiz_metodo_a_codigo: tamizMetodoA,
+        tamiz_metodo_b_codigo: tamizMetodoB,
+        tamiz_metodo_c_codigo: tamizMetodoC,
+        tamiz_utilizado_metodo_codigo: composeTamizMetodoCodigo(tamizMetodoA, tamizMetodoB, tamizMetodoC),
         balanza_1g_codigo: normalizeSelect(merged.balanza_1g_codigo, BALANZA_1G_OPTIONS, '-'),
         balanza_codigo: normalizeSelect(merged.balanza_codigo, BALANZA_01G_OPTIONS, '-'),
         horno_110_codigo: normalizeSelect(merged.horno_110_codigo, HORNO_110_OPTIONS, '-'),
@@ -282,7 +316,14 @@ const getComparableProctorFormState = (form: ProctorPayload): ProctorPayload => 
         tamano_maximo_particula_in: normalizeTextValue(hydrated.tamano_maximo_particula_in),
         forma_particula: normalizeTextValue(hydrated.forma_particula),
         clasificacion_sucs_visual: normalizeTextValue(hydrated.clasificacion_sucs_visual),
-        tamiz_utilizado_metodo_codigo: normalizeTextValue(hydrated.tamiz_utilizado_metodo_codigo) || '-',
+        tamiz_metodo_a_codigo: normalizeSelect(hydrated.tamiz_metodo_a_codigo, TAMIZ_METODO_A_OPTIONS, DEFAULT_TAMIZ_METODO_A),
+        tamiz_metodo_b_codigo: normalizeSelect(hydrated.tamiz_metodo_b_codigo, TAMIZ_METODO_B_OPTIONS, DEFAULT_TAMIZ_METODO_B),
+        tamiz_metodo_c_codigo: normalizeSelect(hydrated.tamiz_metodo_c_codigo, TAMIZ_METODO_C_OPTIONS, DEFAULT_TAMIZ_METODO_C),
+        tamiz_utilizado_metodo_codigo: composeTamizMetodoCodigo(
+            normalizeSelect(hydrated.tamiz_metodo_a_codigo, TAMIZ_METODO_A_OPTIONS, DEFAULT_TAMIZ_METODO_A),
+            normalizeSelect(hydrated.tamiz_metodo_b_codigo, TAMIZ_METODO_B_OPTIONS, DEFAULT_TAMIZ_METODO_B),
+            normalizeSelect(hydrated.tamiz_metodo_c_codigo, TAMIZ_METODO_C_OPTIONS, DEFAULT_TAMIZ_METODO_C),
+        ),
         balanza_1g_codigo: normalizeTextValue(hydrated.balanza_1g_codigo) || '-',
         balanza_codigo: normalizeTextValue(hydrated.balanza_codigo) || '-',
         horno_110_codigo: normalizeTextValue(hydrated.horno_110_codigo) || '-',
@@ -639,6 +680,11 @@ export default function ProctorForm() {
             tamiz_masa_retenida_g: sievePreview.mass,
             tamiz_porcentaje_retenido: sievePreview.pct,
             tamiz_porcentaje_retenido_acumulado: sievePreview.acc,
+            tamiz_utilizado_metodo_codigo: composeTamizMetodoCodigo(
+                form.tamiz_metodo_a_codigo,
+                form.tamiz_metodo_b_codigo,
+                form.tamiz_metodo_c_codigo,
+            ),
         }
     }, [computedPoints, form, sievePreview])
 
@@ -905,10 +951,22 @@ export default function ProctorForm() {
                 <Section title="Equipo utilizado">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         <SelectField
-                            label="Tamiz utilizado metodo"
-                            value={form.tamiz_utilizado_metodo_codigo || '-'}
-                            options={TAMIZ_METODO_OPTIONS}
-                            onChange={v => set('tamiz_utilizado_metodo_codigo', v)}
+                            label="Tamiz metodo A (No. 4)"
+                            value={form.tamiz_metodo_a_codigo || '-'}
+                            options={TAMIZ_METODO_A_OPTIONS}
+                            onChange={v => set('tamiz_metodo_a_codigo', v)}
+                        />
+                        <SelectField
+                            label="Tamiz metodo B (3/8in)"
+                            value={form.tamiz_metodo_b_codigo || '-'}
+                            options={TAMIZ_METODO_B_OPTIONS}
+                            onChange={v => set('tamiz_metodo_b_codigo', v)}
+                        />
+                        <SelectField
+                            label="Tamiz metodo C (3/4in)"
+                            value={form.tamiz_metodo_c_codigo || '-'}
+                            options={TAMIZ_METODO_C_OPTIONS}
+                            onChange={v => set('tamiz_metodo_c_codigo', v)}
                         />
                         <SelectField
                             label="Balanza 1 g"
