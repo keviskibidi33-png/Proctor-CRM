@@ -50,6 +50,13 @@ const getDraftStorageKey = (ensayoId: number | null) =>
     `${PROCTOR_DRAFT_STORAGE_PREFIX}:${ensayoId ?? 'new'}`
 
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
+const formatTodayShortDate = () => {
+    const d = new Date()
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yy = String(d.getFullYear()).slice(-2)
+    return `${dd}/${mm}/${yy}`
+}
 
 const getEnterNavigableFields = (): HTMLElement[] => {
     if (typeof document === 'undefined') return []
@@ -167,7 +174,7 @@ const emptySieveArray = () => Array.from({ length: 5 }, () => null as number | n
 const buildInitialState = (): ProctorPayload => ({
     muestra: '',
     numero_ot: '',
-    fecha_ensayo: '',
+    fecha_ensayo: formatTodayShortDate(),
     realizado_por: '',
     puntos: Array.from({ length: 5 }, (_, idx) => emptyPoint(idx)),
     tipo_muestra: '',
@@ -194,9 +201,9 @@ const buildInitialState = (): ProctorPayload => ({
     pison_codigo: '-',
     observaciones: '',
     revisado_por: '-',
-    revisado_fecha: '',
+    revisado_fecha: formatTodayShortDate(),
     aprobado_por: '-',
-    aprobado_fecha: '',
+    aprobado_fecha: formatTodayShortDate(),
 })
 
 const normalizeNumberArray = (value: Array<number | null> | undefined, length: number): Array<number | null> => {

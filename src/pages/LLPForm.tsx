@@ -21,6 +21,13 @@ const EQ_COPA = ['-', 'EQP-0048'] as const
 const EQ_RANURADOR = ['-', 'INS-0107'] as const
 const REVISADO = ['-', 'FABIAN LA ROSA'] as const
 const APROBADO = ['-', 'IRMA COAQUIRA'] as const
+const formatTodayShortDate = () => {
+    const d = new Date()
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yy = String(d.getFullYear()).slice(-2)
+    return `${dd}/${mm}/${yy}`
+}
 
 const emptyPoint = (): LLPPuntoRow => ({
     recipiente_numero: '',
@@ -34,7 +41,7 @@ const emptyPoint = (): LLPPuntoRow => ({
 const initialState = (): LLPPayload => ({
     muestra: '',
     numero_ot: '',
-    fecha_ensayo: '',
+    fecha_ensayo: formatTodayShortDate(),
     realizado_por: '',
     metodo_ensayo_limite_liquido: '-',
     herramienta_ranurado_limite_liquido: '-',
@@ -55,9 +62,9 @@ const initialState = (): LLPPayload => ({
     ranurador_codigo: '-',
     observaciones: '',
     revisado_por: '-',
-    revisado_fecha: '',
+    revisado_fecha: formatTodayShortDate(),
     aprobado_por: '-',
-    aprobado_fecha: '',
+    aprobado_fecha: formatTodayShortDate(),
 })
 
 const parseNum = (v: unknown): number | null => {
