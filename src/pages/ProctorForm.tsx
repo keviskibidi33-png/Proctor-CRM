@@ -373,53 +373,48 @@ interface PointComputed {
 }
 
 const computePoint = (point: ProctorPunto): PointComputed => {
+    const masaHumedaMolde = toOptionalNumber(point.masa_suelo_humedo_molde_a)
+    const masaMoldeCompactacion = toOptionalNumber(point.masa_molde_compactacion_b)
+    const volumenMolde = toOptionalNumber(point.volumen_molde_compactacion_d)
+    const masaRecipienteHumedo = toOptionalNumber(point.masa_recipiente_suelo_humedo_e)
+    const masaRecipienteSeco = toOptionalNumber(point.masa_recipiente_suelo_seco_3_f)
+    const masaRecipiente = toOptionalNumber(point.masa_recipiente_g)
+
+    const storedMasaCompactado = toOptionalNumber(point.masa_suelo_compactado_c)
     const masaCompactado =
-        toOptionalNumber(point.masa_suelo_compactado_c) ??
-        (
-            point.masa_suelo_humedo_molde_a != null && point.masa_molde_compactacion_b != null
-                ? Number((point.masa_suelo_humedo_molde_a - point.masa_molde_compactacion_b).toFixed(2))
-                : null
-        )
+        masaHumedaMolde != null && masaMoldeCompactacion != null
+            ? Number((masaHumedaMolde - masaMoldeCompactacion).toFixed(2))
+            : storedMasaCompactado
 
+    const storedDensidadHumeda = toOptionalNumber(point.densidad_humeda_x)
     const densidadHumeda =
-        toOptionalNumber(point.densidad_humeda_x) ??
-        (
-            masaCompactado != null && point.volumen_molde_compactacion_d != null && point.volumen_molde_compactacion_d !== 0
-                ? Number((masaCompactado / point.volumen_molde_compactacion_d).toFixed(3))
-                : null
-        )
+        masaCompactado != null && volumenMolde != null && volumenMolde !== 0
+            ? Number((masaCompactado / volumenMolde).toFixed(3))
+            : storedDensidadHumeda
 
+    const storedMasaAgua = toOptionalNumber(point.masa_agua_y)
     const masaAgua =
-        toOptionalNumber(point.masa_agua_y) ??
-        (
-            point.masa_recipiente_suelo_humedo_e != null && point.masa_recipiente_suelo_seco_3_f != null
-                ? Number((point.masa_recipiente_suelo_humedo_e - point.masa_recipiente_suelo_seco_3_f).toFixed(2))
-                : null
-        )
+        masaRecipienteHumedo != null && masaRecipienteSeco != null
+            ? Number((masaRecipienteHumedo - masaRecipienteSeco).toFixed(2))
+            : storedMasaAgua
 
+    const storedMasaSueloSeco = toOptionalNumber(point.masa_suelo_seco_z)
     const masaSueloSeco =
-        toOptionalNumber(point.masa_suelo_seco_z) ??
-        (
-            point.masa_recipiente_suelo_seco_3_f != null && point.masa_recipiente_g != null
-                ? Number((point.masa_recipiente_suelo_seco_3_f - point.masa_recipiente_g).toFixed(2))
-                : null
-        )
+        masaRecipienteSeco != null && masaRecipiente != null
+            ? Number((masaRecipienteSeco - masaRecipiente).toFixed(2))
+            : storedMasaSueloSeco
 
+    const storedContenidoHumedad = toOptionalNumber(point.contenido_humedad_moldeo_w)
     const contenidoHumedad =
-        toOptionalNumber(point.contenido_humedad_moldeo_w) ??
-        (
-            masaAgua != null && masaSueloSeco != null && masaSueloSeco !== 0
-                ? Number(((masaAgua / masaSueloSeco) * 100).toFixed(2))
-                : null
-        )
+        masaAgua != null && masaSueloSeco != null && masaSueloSeco !== 0
+            ? Number(((masaAgua / masaSueloSeco) * 100).toFixed(2))
+            : storedContenidoHumedad
 
+    const storedDensidadSeca = toOptionalNumber(point.densidad_seca)
     const densidadSeca =
-        toOptionalNumber(point.densidad_seca) ??
-        (
-            densidadHumeda != null && contenidoHumedad != null
-                ? Number((densidadHumeda / (1 + contenidoHumedad / 100)).toFixed(3))
-                : null
-        )
+        densidadHumeda != null && contenidoHumedad != null
+            ? Number((densidadHumeda / (1 + contenidoHumedad / 100)).toFixed(3))
+            : storedDensidadSeca
 
     return {
         masa_suelo_compactado_c: masaCompactado,
