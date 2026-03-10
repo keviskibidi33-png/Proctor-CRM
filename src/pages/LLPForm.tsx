@@ -68,7 +68,7 @@ const emptyPoint = (): LLPPuntoRow => ({
 const initialState = (): LLPPayload => ({
     muestra: '',
     numero_ot: '',
-    fecha_ensayo: formatTodayShortDate(),
+    fecha_ensayo: '',
     realizado_por: '',
     metodo_ensayo_limite_liquido: '-',
     herramienta_ranurado_limite_liquido: '-',

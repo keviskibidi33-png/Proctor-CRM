@@ -174,7 +174,7 @@ const emptySieveArray = () => Array.from({ length: 5 }, () => null as number | n
 const buildInitialState = (): ProctorPayload => ({
     muestra: '',
     numero_ot: '',
-    fecha_ensayo: formatTodayShortDate(),
+    fecha_ensayo: '',
     realizado_por: '',
     puntos: Array.from({ length: 5 }, (_, idx) => emptyPoint(idx)),
     tipo_muestra: '',
