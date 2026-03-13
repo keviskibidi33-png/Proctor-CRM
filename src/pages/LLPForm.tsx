@@ -2,8 +2,22 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { Beaker, ChevronDown, Download, Loader2, Trash2 } from 'lucide-react'
+import FormatConfirmModal from '../components/FormatConfirmModal'
 import { getLLPEnsayoDetail, saveAndDownloadLLPExcel, saveLLPEnsayo } from '@/services/api'
 import type { LLPPayload, LLPPuntoRow } from '@/types'
+
+
+const buildFormatPreview = (sampleCode: string | undefined, materialCode: 'SU' | 'AG', ensayo: string) => {
+    const currentYear = new Date().getFullYear().toString().slice(-2)
+    const normalized = (sampleCode || '').trim().toUpperCase()
+    const fullMatch = normalized.match(/^(\d+)(?:-[A-Z0-9. ]+)?-(\d{2,4})$/)
+    const partialMatch = normalized.match(/^(\d+)(?:-(\d{2,4}))?$/)
+    const match = fullMatch || partialMatch
+    const numero = match?.[1] || 'xxxx'
+    const year = (match?.[2] || currentYear).slice(-2)
+    return `Formato N-${numero}-${materialCode}-${year} ${ensayo}`
+}
+
 
 const POINT_HEADERS = ['1', '2', '3', '1', '2']
 const DRAFT_KEY = 'llp_form_draft_v1'
@@ -200,6 +214,8 @@ export default function LLPForm() {
         setForm(initialState())
     }, [editingEnsayoId])
 
+    const [pendingFormatAction, setPendingFormatAction] = useState<boolean | null>(null)
+
     const save = useCallback(async (download: boolean) => {
         if (!form.muestra || !form.numero_ot || !form.realizado_por) {
             toast.error('Complete Muestra, N OT y Realizado por.')
@@ -213,11 +229,11 @@ export default function LLPForm() {
                 puntos: form.puntos.map((p, idx) => ({ ...p, numero_golpes: idx < 3 ? parseNum(p.numero_golpes) : null })),
             }
             if (download) {
-                const { blob } = await saveAndDownloadLLPExcel(payload, editingEnsayoId ?? undefined)
+                const { blob, filename } = await saveAndDownloadLLPExcel(payload, editingEnsayoId ?? undefined)
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `LLP_${payload.numero_ot}_${new Date().toISOString().slice(0, 10)}.xlsx`
+                a.download = filename || `${buildFormatPreview(form.muestra, 'SU', 'LLP')}.xlsx`
                 a.click()
                 URL.revokeObjectURL(url)
             } else {
@@ -282,8 +298,8 @@ export default function LLPForm() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <button onClick={clearAll} disabled={loading} className="h-11 rounded-lg border border-input bg-background text-foreground font-medium hover:bg-muted/60 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"><Trash2 className="h-4 w-4" />Limpiar todo</button>
-                        <button onClick={() => void save(false)} disabled={loading} className="h-11 rounded-lg border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50">{loading ? 'Guardando...' : 'Guardar'}</button>
-                        <button onClick={() => void save(true)} disabled={loading} className="h-11 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">{loading ? <><Loader2 className="h-4 w-4 animate-spin" />Procesando...</> : <><Download className="h-4 w-4" />Guardar y descargar Excel</>}</button>
+                        <button onClick={() => setPendingFormatAction(false)} disabled={loading} className="h-11 rounded-lg border border-primary text-primary font-semibold hover:bg-primary/10 transition-colors disabled:opacity-50">{loading ? 'Guardando...' : 'Guardar'}</button>
+                        <button onClick={() => setPendingFormatAction(true)} disabled={loading} className="h-11 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">{loading ? <><Loader2 className="h-4 w-4 animate-spin" />Procesando...</> : <><Download className="h-4 w-4" />Guardar y descargar Excel</>}</button>
                     </div>
                 </div>
 
@@ -295,6 +311,19 @@ export default function LLPForm() {
                     </div>
                 </aside>
             </div>
+
+            <FormatConfirmModal
+                open={pendingFormatAction !== null}
+                formatLabel={buildFormatPreview(form.muestra, 'SU', 'LLP')}
+                actionLabel={pendingFormatAction ? 'Guardar y Descargar' : 'Guardar'}
+                onClose={() => setPendingFormatAction(null)}
+                onConfirm={() => {
+                    if (pendingFormatAction === null) return
+                    const shouldDownload = pendingFormatAction
+                    setPendingFormatAction(null)
+                    void save(shouldDownload)
+                }}
+            />
         </div>
     )
 }

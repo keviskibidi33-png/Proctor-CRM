@@ -34,6 +34,12 @@ api.interceptors.response.use(
     },
 )
 
+
+const extractFilename = (contentDisposition?: string): string | undefined => {
+    const match = typeof contentDisposition === 'string' ? contentDisposition.match(/filename="?([^";]+)"?/i) : null
+    return match?.[1]
+}
+
 export async function saveProctorEnsayo(
     payload: ProctorPayload,
     ensayoId?: number,
@@ -50,7 +56,7 @@ export async function saveProctorEnsayo(
 export async function saveAndDownloadProctorExcel(
     payload: ProctorPayload,
     ensayoId?: number,
-): Promise<{ blob: Blob; ensayoId?: number }> {
+): Promise<{ blob: Blob; ensayoId?: number; filename?: string }> {
     const response = await api.post('/api/proctor/excel', payload, {
         params: {
             download: true,
@@ -64,6 +70,7 @@ export async function saveAndDownloadProctorExcel(
     return {
         blob: response.data,
         ensayoId: Number.isFinite(parsedId) ? parsedId : undefined,
+        filename: extractFilename(response.headers['content-disposition']),
     }
 }
 
@@ -95,7 +102,7 @@ export async function saveLLPEnsayo(
 export async function saveAndDownloadLLPExcel(
     payload: LLPPayload,
     ensayoId?: number,
-): Promise<{ blob: Blob; ensayoId?: number }> {
+): Promise<{ blob: Blob; ensayoId?: number; filename?: string }> {
     const response = await api.post('/api/llp/excel', payload, {
         params: {
             download: true,
@@ -109,6 +116,7 @@ export async function saveAndDownloadLLPExcel(
     return {
         blob: response.data,
         ensayoId: Number.isFinite(parsedId) ? parsedId : undefined,
+        filename: extractFilename(response.headers['content-disposition']),
     }
 }
 
