@@ -21,13 +21,7 @@ const EQ_COPA = ['-', 'EQP-0048'] as const
 const EQ_RANURADOR = ['-', 'INS-0107'] as const
 const REVISADO = ['-', 'FABIAN LA ROSA'] as const
 const APROBADO = ['-', 'IRMA COAQUIRA'] as const
-const formatTodayShortDate = () => {
-    const d = new Date()
-    const dd = String(d.getDate()).padStart(2, '0')
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const yy = String(d.getFullYear()).slice(-2)
-    return `${dd}/${mm}/${yy}`
-}
+
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
 const normalizeFlexibleDate = (raw: string): string => {
     const value = raw.trim()
@@ -89,9 +83,9 @@ const initialState = (): LLPPayload => ({
     ranurador_codigo: '-',
     observaciones: '',
     revisado_por: '-',
-    revisado_fecha: formatTodayShortDate(),
+    revisado_fecha: '',
     aprobado_por: '-',
-    aprobado_fecha: formatTodayShortDate(),
+    aprobado_fecha: '',
 })
 
 const parseNum = (v: unknown): number | null => {

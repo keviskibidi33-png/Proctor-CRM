@@ -8,6 +8,7 @@ import {
     saveProctorEnsayo,
 } from '@/services/api'
 import type { ProctorPayload, ProctorEnsayoDetail, ProctorPunto } from '@/types'
+import FormatConfirmModal from '../components/FormatConfirmModal'
 
 const POINT_COLUMNS = ['Punto 1', 'Punto 2', 'Punto 3', 'Punto 4', 'Punto 5']
 const SIEVE_LABELS = ['19 mm (3/4 in)', '9.5 mm (3/8 in)', '4.75 mm (No. 4)', 'Menor (No. 4)', 'Total']
@@ -50,13 +51,7 @@ const getDraftStorageKey = (ensayoId: number | null) =>
     `${PROCTOR_DRAFT_STORAGE_PREFIX}:${ensayoId ?? 'new'}`
 
 const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
-const formatTodayShortDate = () => {
-    const d = new Date()
-    const dd = String(d.getDate()).padStart(2, '0')
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const yy = String(d.getFullYear()).slice(-2)
-    return `${dd}/${mm}/${yy}`
-}
+
 
 const getEnterNavigableFields = (): HTMLElement[] => {
     if (typeof document === 'undefined') return []
@@ -201,9 +196,9 @@ const buildInitialState = (): ProctorPayload => ({
     pison_codigo: '-',
     observaciones: '',
     revisado_por: '-',
-    revisado_fecha: formatTodayShortDate(),
+    revisado_fecha: '',
     aprobado_por: '-',
-    aprobado_fecha: formatTodayShortDate(),
+    aprobado_fecha: '',
 })
 
 const normalizeNumberArray = (value: Array<number | null> | undefined, length: number): Array<number | null> => {
@@ -733,6 +728,8 @@ export default function ProctorForm() {
         setIsClearDraftModalOpen(false)
         clearLocalDraft()
     }, [clearLocalDraft])
+    const [pendingFormatAction, setPendingFormatAction] = useState<boolean | null>(null)
+
 
     const handleSave = useCallback(async (withDownload: boolean) => {
         if (!form.muestra || !form.numero_ot || !form.realizado_por) {
@@ -1021,10 +1018,10 @@ export default function ProctorForm() {
                         <Trash2 className="h-4 w-4" />
                         Limpiar datos
                     </button>
-                    <button onClick={() => void handleSave(false)} disabled={loading} className="h-11 rounded-lg bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                    <button onClick={() => setPendingFormatAction(false)} disabled={loading} className="h-11 rounded-lg bg-secondary text-secondary-foreground font-medium hover:bg-secondary/80 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                         {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar'}
                     </button>
-                    <button onClick={() => void handleSave(true)} disabled={loading} className="h-11 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                    <button onClick={() => setPendingFormatAction(true)} disabled={loading} className="h-11 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                         {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Procesando...</> : <><Download className="h-4 w-4" /> Guardar y Descargar</>}
                     </button>
                 </div>
