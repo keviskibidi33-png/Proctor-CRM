@@ -818,7 +818,7 @@ export default function ProctorForm() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <Input label="Muestra *" value={form.muestra} onChange={v => set('muestra', v)} placeholder="123-SU-26 / 123-AG-26" />
                         <Input label="N OT *" value={form.numero_ot} onChange={v => set('numero_ot', v)} onBlur={() => applyFormattedField('numero_ot', normalizeNumeroOtCode)} placeholder="1234-26" />
-                        <Input label="Fecha de ensayo" value={form.fecha_ensayo} onChange={v => set('fecha_ensayo', v)} onBlur={() => applyFormattedField('fecha_ensayo', normalizeFlexibleDate)} placeholder="DD/MM/AA" />
+                        <Input label="Fecha de ensayo" value={form.fecha_ensayo} onChange={v => set('fecha_ensayo', v)} onBlur={() => applyFormattedField('fecha_ensayo', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
                         <Input label="Realizado por *" value={form.realizado_por} onChange={v => set('realizado_por', v)} placeholder="Iniciales o nombre" />
                     </div>
                 </Section>
@@ -1017,9 +1017,9 @@ export default function ProctorForm() {
                 <Section title="Revisado / Aprobado">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <SelectField label="Revisado por" value={form.revisado_por || '-'} options={REVISADO_POR_OPTIONS} onChange={v => set('revisado_por', v)} />
-                        <Input label="Fecha revision" value={form.revisado_fecha || ''} onChange={v => set('revisado_fecha', v)} onBlur={() => applyFormattedField('revisado_fecha', normalizeFlexibleDate)} placeholder="DD/MM/AA" />
+                        <Input label="Fecha revision" value={form.revisado_fecha || ''} onChange={v => set('revisado_fecha', v)} onBlur={() => applyFormattedField('revisado_fecha', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
                         <SelectField label="Aprobado por" value={form.aprobado_por || '-'} options={APROBADO_POR_OPTIONS} onChange={v => set('aprobado_por', v)} />
-                        <Input label="Fecha aprobacion" value={form.aprobado_fecha || ''} onChange={v => set('aprobado_fecha', v)} onBlur={() => applyFormattedField('aprobado_fecha', normalizeFlexibleDate)} placeholder="DD/MM/AA" />
+                        <Input label="Fecha aprobacion" value={form.aprobado_fecha || ''} onChange={v => set('aprobado_fecha', v)} onBlur={() => applyFormattedField('aprobado_fecha', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
                     </div>
                 </Section>
 
