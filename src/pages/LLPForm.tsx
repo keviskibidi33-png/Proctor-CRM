@@ -10,8 +10,8 @@ import type { LLPPayload, LLPPuntoRow } from '@/types'
 const buildFormatPreview = (sampleCode: string | undefined, materialCode: 'SU' | 'AG', ensayo: string) => {
     const currentYear = new Date().getFullYear().toString().slice(-2)
     const normalized = (sampleCode || '').trim().toUpperCase()
-    const fullMatch = normalized.match(/^(\d+)(?:-[A-Z0-9. ]+)?-(\d{2,4})$/)
-    const partialMatch = normalized.match(/^(\d+)(?:-(\d{2,4}))?$/)
+    const fullMatch = normalized.match(/^(?:N-?)?(\d+)(?:-[A-Z0-9. ]+)?-(\d{2,4})$/)
+    const partialMatch = normalized.match(/^(?:N-?)?(\d+)(?:-(\d{2,4}))?$/)
     const match = fullMatch || partialMatch
     const numero = match?.[1] || 'xxxx'
     const year = (match?.[2] || currentYear).slice(-2)
