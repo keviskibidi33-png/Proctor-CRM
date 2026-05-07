@@ -41,26 +41,35 @@ const normalizeFlexibleDate = (raw: string): string => {
     const value = raw.trim()
     if (!value) return ''
     const digits = value.replace(/\D/g, '')
-    const year = getCurrentYearShort()
+    const currentYear = String(new Date().getFullYear())
     const pad2 = (part: string) => part.padStart(2, '0').slice(-2)
-    const build = (d: string, m: string, y: string = year) => `${pad2(d)}/${pad2(m)}/${pad2(y)}`
+    const normalizeYear = (part: string) => {
+        const clean = part.replace(/\D/g, '')
+        if (clean.length >= 4) return clean.slice(0, 4)
+        if (clean.length === 2) return `20${clean}`
+        if (clean.length === 1) return `200${clean}`
+        return currentYear
+    }
+    const build = (y: string, m: string, d: string) => `${normalizeYear(y)}/${pad2(m)}/${pad2(d)}`
 
-    if (value.includes('/')) {
-        const [d = '', m = '', yRaw = ''] = value.split('/').map((part) => part.trim())
-        if (!d || !m) return value
-        let yy = yRaw.replace(/\D/g, '')
-        if (yy.length === 4) yy = yy.slice(-2)
-        if (yy.length === 1) yy = `0${yy}`
-        if (!yy) yy = year
-        return build(d, m, yy)
+    if (value.includes('/') || value.includes('-')) {
+        const [a = '', b = '', c = ''] = value.split(/[/-]/).map((part) => part.trim())
+        if (!a || !b) return value
+        if (a.length === 4) return build(a, b, c || '01')
+        if (c) return build(c, b, a)
+        return value
     }
 
-    if (digits.length === 2) return build(digits[0], digits[1])
-    if (digits.length === 3) return build(digits[0], digits.slice(1, 3))
-    if (digits.length === 4) return build(digits.slice(0, 2), digits.slice(2, 4))
-    if (digits.length === 5) return build(digits[0], digits.slice(1, 3), digits.slice(3, 5))
-    if (digits.length === 6) return build(digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6))
-    if (digits.length >= 8) return build(digits.slice(0, 2), digits.slice(2, 4), digits.slice(6, 8))
+    if (digits.length === 8) {
+        if (digits.startsWith('19') || digits.startsWith('20')) return build(digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8))
+        return build(digits.slice(4, 8), digits.slice(2, 4), digits.slice(0, 2))
+    }
+    if (digits.length === 6) return build(digits.slice(4, 6), digits.slice(2, 4), digits.slice(0, 2))
+    if (digits.length === 5) return build(digits.slice(3, 5), digits.slice(1, 3), digits[0])
+    if (digits.length === 4) return build(currentYear, digits.slice(0, 2), digits.slice(2, 4))
+    if (digits.length === 3) return build(currentYear, digits[0], digits.slice(1, 3))
+    if (digits.length === 2) return build(currentYear, digits[0], digits[1])
+
     return value
 }
 
@@ -294,7 +303,17 @@ export default function LLPForm() {
                             <tr><td className="px-3 py-2 border-b border-r border-border">% Humedad (G/H*100)</td><td className="px-2 py-2 border-b border-r border-border text-center">%</td>{calc.map((c, i) => <td key={`h-${i}`} className="px-2 py-2 border-b border-r border-border last:border-r-0"><div className="h-8 rounded-md border border-primary bg-primary/5 text-primary font-semibold flex items-center justify-center">{c.humedad ?? '-'}</div></td>)}</tr>
                         </tbody></table></div></div>
 
-                    <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Equipos / observaciones / firmas</h2></div><div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="space-y-3">{renderSelect('Balanza 0.01 g', form.balanza_001g_codigo || '-', EQ_BALANZA, v => setField('balanza_001g_codigo', v))}{renderSelect('Horno 110 C', form.horno_110_codigo || '-', EQ_HORNO, v => setField('horno_110_codigo', v))}{renderSelect('Copa casagrande', form.copa_casagrande_codigo || '-', EQ_COPA, v => setField('copa_casagrande_codigo', v))}{renderSelect('Ranurador', form.ranurador_codigo || '-', EQ_RANURADOR, v => setField('ranurador_codigo', v))}</div><div className="space-y-3"><div><label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones</label><textarea value={form.observaciones || ''} onChange={e => setField('observaciones', e.target.value)} rows={4} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none" /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{renderSelect('Revisado por', form.revisado_por || '-', REVISADO, v => setField('revisado_por', v))}{renderSelect('Aprobado por', form.aprobado_por || '-', APROBADO, v => setField('aprobado_por', v))}{renderText('Fecha revisado', form.revisado_fecha || '', v => setField('revisado_fecha', v), 'YYYY/MM/DD', () => setField('revisado_fecha', normalizeFlexibleDate(form.revisado_fecha || '')))}{renderText('Fecha aprobado', form.aprobado_fecha || '', v => setField('aprobado_fecha', v), 'YYYY/MM/DD', () => setField('aprobado_fecha', normalizeFlexibleDate(form.aprobado_fecha || '')))}</div></div></div></div>
+                    <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Equipos / observaciones / firmas</h2></div><div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="space-y-3">{renderSelect('Balanza 0.01 g', form.balanza_001g_codigo || '-', EQ_BALANZA, v => setField('balanza_001g_codigo', v))}{renderSelect('Horno 110 C', form.horno_110_codigo || '-', EQ_HORNO, v => setField('horno_110_codigo', v))}{renderSelect('Copa casagrande', form.copa_casagrande_codigo || '-', EQ_COPA, v => setField('copa_casagrande_codigo', v))}{renderSelect('Ranurador', form.ranurador_codigo || '-', EQ_RANURADOR, v => setField('ranurador_codigo', v))}</div><div className="space-y-3"><div><label className="block text-xs font-medium text-muted-foreground mb-1">Observaciones</label><textarea value={form.observaciones || ''} onChange={e => setField('observaciones', e.target.value)} rows={4} className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm resize-none" /></div><div className="grid grid-cols-1 md:grid-cols-2 gap-3">{renderSelect('Revisado por', form.revisado_por || '-', REVISADO, v => {
+                                        setField('revisado_por', v)
+                                        if (v !== '-') {
+                                            setField('revisado_fecha', normalizeFlexibleDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' })))
+                                        }
+                                    })}{renderSelect('Aprobado por', form.aprobado_por || '-', APROBADO, v => {
+                                        setField('aprobado_por', v)
+                                        if (v !== '-') {
+                                            setField('aprobado_fecha', normalizeFlexibleDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' })))
+                                        }
+                                    })}{renderText('Fecha revisado', form.revisado_fecha || '', v => setField('revisado_fecha', v), 'YYYY/MM/DD', () => setField('revisado_fecha', normalizeFlexibleDate(form.revisado_fecha || '')))}{renderText('Fecha aprobado', form.aprobado_fecha || '', v => setField('aprobado_fecha', v), 'YYYY/MM/DD', () => setField('aprobado_fecha', normalizeFlexibleDate(form.aprobado_fecha || '')))}</div></div></div></div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <button onClick={clearAll} disabled={loading} className="h-11 rounded-lg border border-input bg-background text-foreground font-medium hover:bg-muted/60 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"><Trash2 className="h-4 w-4" />Limpiar todo</button>

@@ -120,28 +120,35 @@ const normalizeNumeroOtCode = (raw: string): string => {
 const normalizeFlexibleDate = (raw: string): string => {
     const value = raw.trim()
     if (!value) return ''
-
     const digits = value.replace(/\D/g, '')
-    const year = getCurrentYearShort()
+    const currentYear = String(new Date().getFullYear())
     const pad2 = (part: string) => part.padStart(2, '0').slice(-2)
-    const build = (d: string, m: string, y: string = year) => `${pad2(d)}/${pad2(m)}/${pad2(y)}`
+    const normalizeYear = (part: string) => {
+        const clean = part.replace(/\D/g, '')
+        if (clean.length >= 4) return clean.slice(0, 4)
+        if (clean.length === 2) return `20${clean}`
+        if (clean.length === 1) return `200${clean}`
+        return currentYear
+    }
+    const build = (y: string, m: string, d: string) => `${normalizeYear(y)}/${pad2(m)}/${pad2(d)}`
 
-    if (value.includes('/')) {
-        const [d = '', m = '', yRaw = ''] = value.split('/').map(part => part.trim())
-        if (!d || !m) return value
-        let yy = yRaw.replace(/\D/g, '')
-        if (yy.length === 4) yy = yy.slice(-2)
-        if (yy.length === 1) yy = `0${yy}`
-        if (!yy) yy = year
-        return build(d, m, yy)
+    if (value.includes('/') || value.includes('-')) {
+        const [a = '', b = '', c = ''] = value.split(/[/-]/).map((part) => part.trim())
+        if (!a || !b) return value
+        if (a.length === 4) return build(a, b, c || '01')
+        if (c) return build(c, b, a)
+        return value
     }
 
-    if (digits.length === 2) return build(digits[0], digits[1])
-    if (digits.length === 3) return build(digits[0], digits.slice(1, 3))
-    if (digits.length === 4) return build(digits.slice(0, 2), digits.slice(2, 4))
-    if (digits.length === 5) return build(digits[0], digits.slice(1, 3), digits.slice(3, 5))
-    if (digits.length === 6) return build(digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 6))
-    if (digits.length >= 8) return build(digits.slice(0, 2), digits.slice(2, 4), digits.slice(6, 8))
+    if (digits.length === 8) {
+        if (digits.startsWith('19') || digits.startsWith('20')) return build(digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8))
+        return build(digits.slice(4, 8), digits.slice(2, 4), digits.slice(0, 2))
+    }
+    if (digits.length === 6) return build(digits.slice(4, 6), digits.slice(2, 4), digits.slice(0, 2))
+    if (digits.length === 5) return build(digits.slice(3, 5), digits.slice(1, 3), digits[0])
+    if (digits.length === 4) return build(currentYear, digits.slice(0, 2), digits.slice(2, 4))
+    if (digits.length === 3) return build(currentYear, digits[0], digits.slice(1, 3))
+    if (digits.length === 2) return build(currentYear, digits[0], digits[1])
 
     return value
 }
@@ -1016,9 +1023,19 @@ export default function ProctorForm() {
 
                 <Section title="Revisado / Aprobado">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <SelectField label="Revisado por" value={form.revisado_por || '-'} options={REVISADO_POR_OPTIONS} onChange={v => set('revisado_por', v)} />
+                        <SelectField label="Revisado por" value={form.revisado_por || '-'} options={REVISADO_POR_OPTIONS} onChange={v => {
+                            set('revisado_por', v)
+                            if (v !== '-') {
+                                set('revisado_fecha', normalizeFlexibleDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' })))
+                            }
+                        }} />
                         <Input label="Fecha revision" value={form.revisado_fecha || ''} onChange={v => set('revisado_fecha', v)} onBlur={() => applyFormattedField('revisado_fecha', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
-                        <SelectField label="Aprobado por" value={form.aprobado_por || '-'} options={APROBADO_POR_OPTIONS} onChange={v => set('aprobado_por', v)} />
+                        <SelectField label="Aprobado por" value={form.aprobado_por || '-'} options={APROBADO_POR_OPTIONS} onChange={v => {
+                            set('aprobado_por', v)
+                            if (v !== '-') {
+                                set('aprobado_fecha', normalizeFlexibleDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Lima' })))
+                            }
+                        }} />
                         <Input label="Fecha aprobacion" value={form.aprobado_fecha || ''} onChange={v => set('aprobado_fecha', v)} onBlur={() => applyFormattedField('aprobado_fecha', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
                     </div>
                 </Section>
