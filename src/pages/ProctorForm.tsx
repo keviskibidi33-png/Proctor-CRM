@@ -39,7 +39,7 @@ const TAMIZ_METODO_B_OPTIONS = ['-', 'INS-0052 (3/8in)'] as const
 const TAMIZ_METODO_C_OPTIONS = ['-', 'INS-0050 (3/4in)'] as const
 const BALANZA_1G_OPTIONS = ['-', 'EQP-0054'] as const
 const BALANZA_01G_OPTIONS = ['-', 'EQP-0046'] as const
-const HORNO_110_OPTIONS = ['-', 'EQP-0049'] as const
+const HORNO_110_OPTIONS = ['-', 'EQP-0150'] as const
 const MOLDE_OPTIONS = ['-', 'INS-0195 (MOLDE 6in)', 'INS-0114 (MOLDE 4in)'] as const
 const PISON_OPTIONS = ['-', 'INS-0196'] as const
 
