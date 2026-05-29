@@ -361,39 +361,26 @@ export default function LLPForm() {
                     <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Encabezado</h2></div><div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1">Muestra *</label>
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex min-w-0 items-center gap-1.5">
                                     <input
                                         type="text"
                                         value={muestraInput}
                                         onChange={(e) => handleMuestraInputChange(e.target.value)}
-                                        placeholder="1234"
+                                        placeholder={`1234-${muestraType}-${String(new Date().getFullYear()).slice(-2)}`}
                                         autoComplete="off"
                                         data-lpignore="true"
-                                        className="flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                        className="min-w-0 flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                                     />
-                                    <div className="flex border border-slate-300 rounded overflow-hidden shrink-0 h-9 bg-background">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleTypeToggle('SU')}
-                                            className={`px-3 py-1 text-xs font-bold transition-all ${
-                                                muestraType === 'SU'
-                                                    ? 'bg-slate-900 text-white'
-                                                    : 'bg-white text-slate-600 hover:bg-slate-50'
-                                            }`}
+                                    <div className="flex h-9 shrink-0 items-center rounded-md border border-slate-300 bg-background px-1.5">
+                                        <select
+                                            value={muestraType}
+                                            onChange={(e) => handleTypeToggle(e.target.value as 'SU' | 'AG')}
+                                            className="h-7 w-[92px] rounded-md border-0 bg-transparent px-2 text-xs font-bold uppercase text-slate-700 focus:outline-none focus:ring-0"
+                                            aria-label="Tipo de muestra"
                                         >
-                                            SU
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleTypeToggle('AG')}
-                                            className={`px-3 py-1 text-xs font-bold border-l border-slate-300 transition-all ${
-                                                muestraType === 'AG'
-                                                    ? 'bg-slate-900 text-white'
-                                                    : 'bg-white text-slate-600 hover:bg-slate-50'
-                                            }`}
-                                        >
-                                            AG
-                                        </button>
+                                            <option value="SU">SU</option>
+                                            <option value="AG">AG</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
