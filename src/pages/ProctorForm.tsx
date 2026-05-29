@@ -23,6 +23,51 @@ const buildFormatPreview = (sampleCode: string | undefined, materialCode: 'SU' |
     return `Formato N-${numero}-${materialCode}-${year} ${ensayo}`
 }
 
+const parseMuestraCode = (muestra: string, defaultType: 'SU' | 'AG' = 'SU') => {
+    const clean = (muestra || '').trim().toUpperCase().replace(/\s+/g, '')
+    const currentYear = '26'
+    if (!clean) return { number: '', type: defaultType, year: currentYear }
+
+    const parts = clean.split('-')
+    
+    let type: 'SU' | 'AG' = defaultType
+    if (clean.includes('-SU')) {
+        type = 'SU'
+    } else if (clean.includes('-AG')) {
+        type = 'AG'
+    }
+
+    const filteredParts = parts.filter(p => p !== 'SU' && p !== 'AG')
+
+    let number = ''
+    let year = currentYear
+
+    if (filteredParts.length === 0) {
+        return { number: '', type, year }
+    }
+
+    if (filteredParts.length === 1) {
+        number = filteredParts[0]
+    } else {
+        const last = filteredParts[filteredParts.length - 1]
+        if (/^\d{2,4}$/.test(last)) {
+            year = last.slice(-2)
+            number = filteredParts.slice(0, -1).join('-')
+        } else {
+            number = filteredParts.join('-')
+        }
+    }
+
+    return { number, type, year }
+}
+
+const buildMuestraCode = (number: string, type: 'SU' | 'AG', year: string) => {
+    const cleanNum = number.trim()
+    if (!cleanNum) return ''
+    return `${cleanNum}-${type}-${year}`
+}
+
+
 
 const POINT_COLUMNS = ['Punto 1', 'Punto 2', 'Punto 3', 'Punto 4', 'Punto 5']
 const SIEVE_LABELS = ['19 mm (3/4 in)', '9.5 mm (3/8 in)', '4.75 mm (No. 4)', 'Menor (No. 4)', 'Total']
@@ -488,6 +533,39 @@ type SieveArrayKey = 'tamiz_masa_retenida_g' | 'tamiz_porcentaje_retenido' | 'ta
 
 export default function ProctorForm() {
     const [form, setForm] = useState<ProctorPayload>(() => buildInitialState())
+    const [muestraInput, setMuestraInput] = useState('')
+    const [muestraType, setMuestraType] = useState<'SU' | 'AG'>('SU')
+
+    useEffect(() => {
+        if (form.muestra && !muestraInput) {
+            const { number, type, year } = parseMuestraCode(form.muestra, 'SU')
+            const currentYear = '26'
+            const displayVal = year && year !== currentYear ? `${number}-${year}` : number
+            setMuestraInput(displayVal)
+            setMuestraType(type)
+        }
+    }, [form.muestra, muestraInput])
+
+    useEffect(() => {
+        if (!form.muestra) {
+            setMuestraInput('')
+            setMuestraType('SU')
+        }
+    }, [form.muestra])
+
+    const handleMuestraInputChange = (val: string) => {
+        setMuestraInput(val)
+        const { number, year } = parseMuestraCode(val, muestraType)
+        const newCode = buildMuestraCode(number, muestraType, year)
+        set('muestra', newCode)
+    }
+
+    const handleTypeToggle = (newType: 'SU' | 'AG') => {
+        setMuestraType(newType)
+        const { number, year } = parseMuestraCode(muestraInput, newType)
+        const newCode = buildMuestraCode(number, newType, year)
+        set('muestra', newCode)
+    }
     const [loading, setLoading] = useState(false)
     const [editingEnsayoId, setEditingEnsayoId] = useState<number | null>(() => getEnsayoIdFromQuery())
     const [loadingEnsayo, setLoadingEnsayo] = useState(false)
@@ -823,7 +901,44 @@ export default function ProctorForm() {
                 <div className="space-y-5">
                 <Section title="Encabezado" icon={<FlaskConical className="h-4 w-4" />}>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <Input label="Muestra *" value={form.muestra} onChange={v => set('muestra', v)} placeholder="123-SU-26 / 123-AG-26" />
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1">Muestra *</label>
+                            <div className="flex items-center gap-1.5">
+                                <input
+                                    type="text"
+                                    value={muestraInput}
+                                    onChange={(e) => handleMuestraInputChange(e.target.value)}
+                                    placeholder="1234"
+                                    autoComplete="off"
+                                    data-lpignore="true"
+                                    className="flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                />
+                                <div className="flex border border-slate-300 rounded overflow-hidden shrink-0 h-9 bg-background">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTypeToggle('SU')}
+                                        className={`px-3 py-1 text-xs font-bold transition-all ${
+                                            muestraType === 'SU'
+                                                ? 'bg-slate-900 text-white'
+                                                : 'bg-white text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        SU
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleTypeToggle('AG')}
+                                        className={`px-3 py-1 text-xs font-bold border-l border-slate-300 transition-all ${
+                                            muestraType === 'AG'
+                                                ? 'bg-slate-900 text-white'
+                                                : 'bg-white text-slate-600 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        AG
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <Input label="N OT *" value={form.numero_ot} onChange={v => set('numero_ot', v)} onBlur={() => applyFormattedField('numero_ot', normalizeNumeroOtCode)} placeholder="1234-26" />
                         <Input label="Fecha de ensayo" value={form.fecha_ensayo} onChange={v => set('fecha_ensayo', v)} onBlur={() => applyFormattedField('fecha_ensayo', normalizeFlexibleDate)} placeholder="YYYY/MM/DD" />
                         <Input label="Realizado por *" value={form.realizado_por} onChange={v => set('realizado_por', v)} placeholder="Iniciales o nombre" />
@@ -1061,7 +1176,7 @@ export default function ProctorForm() {
 
             <FormatConfirmModal
                 open={pendingFormatAction !== null}
-                formatLabel={buildFormatPreview(form.muestra, 'SU', 'PROCTOR')}
+                formatLabel={buildFormatPreview(form.muestra, muestraType, 'PROCTOR')}
                 actionLabel={pendingFormatAction ? 'Guardar y Descargar' : 'Guardar'}
                 onClose={() => setPendingFormatAction(null)}
                 onConfirm={() => {

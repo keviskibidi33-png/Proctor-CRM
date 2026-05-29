@@ -18,6 +18,51 @@ const buildFormatPreview = (sampleCode: string | undefined, materialCode: 'SU' |
     return `Formato N-${numero}-${materialCode}-${year} ${ensayo}`
 }
 
+const parseMuestraCode = (muestra: string, defaultType: 'SU' | 'AG' = 'SU') => {
+    const clean = (muestra || '').trim().toUpperCase().replace(/\s+/g, '')
+    const currentYear = '26'
+    if (!clean) return { number: '', type: defaultType, year: currentYear }
+
+    const parts = clean.split('-')
+    
+    let type: 'SU' | 'AG' = defaultType
+    if (clean.includes('-SU')) {
+        type = 'SU'
+    } else if (clean.includes('-AG')) {
+        type = 'AG'
+    }
+
+    const filteredParts = parts.filter(p => p !== 'SU' && p !== 'AG')
+
+    let number = ''
+    let year = currentYear
+
+    if (filteredParts.length === 0) {
+        return { number: '', type, year }
+    }
+
+    if (filteredParts.length === 1) {
+        number = filteredParts[0]
+    } else {
+        const last = filteredParts[filteredParts.length - 1]
+        if (/^\d{2,4}$/.test(last)) {
+            year = last.slice(-2)
+            number = filteredParts.slice(0, -1).join('-')
+        } else {
+            number = filteredParts.join('-')
+        }
+    }
+
+    return { number, type, year }
+}
+
+const buildMuestraCode = (number: string, type: 'SU' | 'AG', year: string) => {
+    const cleanNum = number.trim()
+    if (!cleanNum) return ''
+    return `${cleanNum}-${type}-${year}`
+}
+
+
 
 const POINT_HEADERS = ['1', '2', '3', '1', '2']
 const DRAFT_KEY = 'llp_form_draft_v1'
@@ -36,7 +81,6 @@ const EQ_RANURADOR = ['-', 'INS-0107'] as const
 const REVISADO = ['-', 'FABIAN LA ROSA'] as const
 const APROBADO = ['-', 'IRMA COAQUIRA'] as const
 
-const getCurrentYearShort = () => new Date().getFullYear().toString().slice(-2)
 const normalizeFlexibleDate = (raw: string): string => {
     const value = raw.trim()
     if (!value) return ''
@@ -150,6 +194,39 @@ const avg = (values: Array<number | null | undefined>) => {
 
 export default function LLPForm() {
     const [form, setForm] = useState<LLPPayload>(() => initialState())
+    const [muestraInput, setMuestraInput] = useState('')
+    const [muestraType, setMuestraType] = useState<'SU' | 'AG'>('SU')
+
+    useEffect(() => {
+        if (form.muestra && !muestraInput) {
+            const { number, type, year } = parseMuestraCode(form.muestra, 'SU')
+            const currentYear = '26'
+            const displayVal = year && year !== currentYear ? `${number}-${year}` : number
+            setMuestraInput(displayVal)
+            setMuestraType(type)
+        }
+    }, [form.muestra, muestraInput])
+
+    useEffect(() => {
+        if (!form.muestra) {
+            setMuestraInput('')
+            setMuestraType('SU')
+        }
+    }, [form.muestra])
+
+    const handleMuestraInputChange = (val: string) => {
+        setMuestraInput(val)
+        const { number, year } = parseMuestraCode(val, muestraType)
+        const newCode = buildMuestraCode(number, muestraType, year)
+        setField('muestra', newCode)
+    }
+
+    const handleTypeToggle = (newType: 'SU' | 'AG') => {
+        setMuestraType(newType)
+        const { number, year } = parseMuestraCode(muestraInput, newType)
+        const newCode = buildMuestraCode(number, newType, year)
+        setField('muestra', newCode)
+    }
     const [loading, setLoading] = useState(false)
     const [loadingEdit, setLoadingEdit] = useState(false)
     const [editingEnsayoId, setEditingEnsayoId] = useState<number | null>(() => getEnsayoId())
@@ -242,7 +319,7 @@ export default function LLPForm() {
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = filename || `${buildFormatPreview(form.muestra, 'SU', 'LLP')}.xlsx`
+                a.download = filename || `${buildFormatPreview(form.muestra, muestraType, 'LLP')}.xlsx`
                 a.click()
                 URL.revokeObjectURL(url)
             } else {
@@ -281,7 +358,46 @@ export default function LLPForm() {
                 <div className="space-y-5">
                     {loadingEdit ? <div className="h-10 rounded-lg border border-border bg-muted/40 px-3 text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Cargando ensayo...</div> : null}
 
-                    <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Encabezado</h2></div><div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">{renderText('Muestra *', form.muestra, v => setField('muestra', v), '123-SU-26')}{renderText('N OT *', form.numero_ot, v => setField('numero_ot', v), '1234-26')}{renderText('Fecha ensayo', form.fecha_ensayo, v => setField('fecha_ensayo', v), 'YYYY/MM/DD', () => setField('fecha_ensayo', normalizeFlexibleDate(form.fecha_ensayo || '')))}{renderText('Realizado por *', form.realizado_por, v => setField('realizado_por', v))}</div></div>
+                    <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Encabezado</h2></div><div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1">Muestra *</label>
+                                <div className="flex items-center gap-1.5">
+                                    <input
+                                        type="text"
+                                        value={muestraInput}
+                                        onChange={(e) => handleMuestraInputChange(e.target.value)}
+                                        placeholder="1234"
+                                        autoComplete="off"
+                                        data-lpignore="true"
+                                        className="flex-1 h-9 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                                    />
+                                    <div className="flex border border-slate-300 rounded overflow-hidden shrink-0 h-9 bg-background">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTypeToggle('SU')}
+                                            className={`px-3 py-1 text-xs font-bold transition-all ${
+                                                muestraType === 'SU'
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            SU
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleTypeToggle('AG')}
+                                            className={`px-3 py-1 text-xs font-bold border-l border-slate-300 transition-all ${
+                                                muestraType === 'AG'
+                                                    ? 'bg-slate-900 text-white'
+                                                    : 'bg-white text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            AG
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {renderText('N OT *', form.numero_ot, v => setField('numero_ot', v), '1234-26')}{renderText('Fecha ensayo', form.fecha_ensayo, v => setField('fecha_ensayo', v), 'YYYY/MM/DD', () => setField('fecha_ensayo', normalizeFlexibleDate(form.fecha_ensayo || '')))}{renderText('Realizado por *', form.realizado_por, v => setField('realizado_por', v))}</div></div>
 
                     <div className="bg-card border border-border rounded-lg shadow-sm"><div className="px-4 py-2.5 border-b border-border bg-muted/50 rounded-t-lg"><h2 className="text-sm font-semibold text-foreground">Condiciones / Descripción</h2></div><div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
                         <div className="space-y-3">{renderSelect('Método ensayo LL', form.metodo_ensayo_limite_liquido, METODO_LIQUIDO, v => setField('metodo_ensayo_limite_liquido', v as LLPPayload['metodo_ensayo_limite_liquido']))}{renderSelect('Herramienta ranurado', form.herramienta_ranurado_limite_liquido, HERRAMIENTA, v => setField('herramienta_ranurado_limite_liquido', v as LLPPayload['herramienta_ranurado_limite_liquido']))}{renderSelect('Dispositivo LL', form.dispositivo_limite_liquido, DISPOSITIVO, v => setField('dispositivo_limite_liquido', v as LLPPayload['dispositivo_limite_liquido']))}{renderSelect('Método laminación LP', form.metodo_laminacion_limite_plastico, LAMINACION, v => setField('metodo_laminacion_limite_plastico', v as LLPPayload['metodo_laminacion_limite_plastico']))}{renderNum('Contenido humedad inicial (%)', form.contenido_humedad_muestra_inicial_pct, v => setField('contenido_humedad_muestra_inicial_pct', parseNum(v)))}{renderText('Proceso selección muestra', form.proceso_seleccion_muestra || '', v => setField('proceso_seleccion_muestra', v))}{renderSelect('Preparación muestra', form.metodo_preparacion_muestra, PREPARACION, v => setField('metodo_preparacion_muestra', v as LLPPayload['metodo_preparacion_muestra']))}</div>
@@ -333,7 +449,7 @@ export default function LLPForm() {
 
             <FormatConfirmModal
                 open={pendingFormatAction !== null}
-                formatLabel={buildFormatPreview(form.muestra, 'SU', 'LLP')}
+                formatLabel={buildFormatPreview(form.muestra, muestraType, 'LLP')}
                 actionLabel={pendingFormatAction ? 'Guardar y Descargar' : 'Guardar'}
                 onClose={() => setPendingFormatAction(null)}
                 onConfirm={() => {
